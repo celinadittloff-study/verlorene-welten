@@ -1,724 +1,224 @@
 <!DOCTYPE html>
-<html lang="de" data-mode="dark" data-typ="tiere">
+<html lang="de">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Verlorene Welten — Bedrohte Arten</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<style>
-/* ══════════════════════════════════════════════════════════════════
-   DESIGN TOKENS
-   Inspiriert von: Casa Chromatica (Ruby Leaf, Burnt Nectar),
-   LYWEN Pantone (Sweet Vanilla, Army Green, Choco Death),
-   Waldnacht-Ästhetik (Bild 3/4)
-══════════════════════════════════════════════════════════════════ */
-:root {
-  /* Bedrohungsfarben — konstant in allen Modi */
-  --cr:     #C8392A;
-  --en:     #C87828;
-  --vu:     #A89028;
-  --cr-dim: rgba(200,57,42,0.13);
-  --en-dim: rgba(200,120,40,0.13);
-  --vu-dim: rgba(168,144,40,0.13);
-}
-
-/* ── TIERE DARK  (Waldnacht, warm-dunkel, Burnt Nectar Akzent) ── */
-[data-mode="dark"][data-typ="tiere"] {
-  --bg:         #141009;   /* fast schwarz, warmer Erdton */
-  --bg2:        #1C160C;
-  --surface:    #231A0F;
-  --border:     #352812;
-  --text:       #EDE8DC;
-  --text2:      #C0AA88;
-  --muted:      #7A6448;
-  --accent:     #C2441C;   /* Burnt Nectar */
-  --accent-bg:  rgba(194,68,28,0.12);
-  --tile:       dark;
-}
-
-/* ── TIERE LIGHT (Sweet Vanilla, Ruby Leaf Akzent) ────────────── */
-[data-mode="light"][data-typ="tiere"] {
-  --bg:         #EEEBE6;   /* Pantone Sweet Vanilla */
-  --bg2:        #E4DFD6;
-  --surface:    #FAFAF7;
-  --border:     #D0C8B8;
-  --text:       #1A1008;
-  --text2:      #4A3820;
-  --muted:      #8C7458;
-  --accent:     #852E47;   /* Ruby Leaf */
-  --accent-bg:  rgba(133,46,71,0.10);
-  --tile:       light;
-}
-
-/* ── PFLANZEN DARK (Waldnacht olivschwarz, Army Green Akzent) ─── */
-[data-mode="dark"][data-typ="pflanzen"] {
-  --bg:         #0C1209;   /* olivschwarz wie Wald bei Nacht */
-  --bg2:        #121A0E;
-  --surface:    #182314;
-  --border:     #243A1C;
-  --text:       #E0EDD8;
-  --text2:      #A0C090;
-  --muted:      #587848;
-  --accent:     #4B5320;   /* Army Green */
-  --accent-bg:  rgba(75,83,32,0.15);
-  --tile:       dark;
-}
-
-/* ── PFLANZEN LIGHT (helles Gras, tiefes Waldgrün Akzent) ─────── */
-[data-mode="light"][data-typ="pflanzen"] {
-  --bg:         #E8EDE0;
-  --bg2:        #DCE4D2;
-  --surface:    #F6F9F2;
-  --border:     #C4D4B4;
-  --text:       #0A1808;
-  --text2:      #2C4820;
-  --muted:      #587050;
-  --accent:     #2D5A1A;
-  --accent-bg:  rgba(45,90,26,0.10);
-  --tile:       light;
-}
-
-/* ══════════════════════════════════════════════════════════════════
-   BASE
-══════════════════════════════════════════════════════════════════ */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; }
-
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: 'Inter', sans-serif;
-  font-size: 16px;
-  line-height: 1.6;
-  overflow-x: hidden;
-  transition: background 0.5s ease, color 0.5s ease;
-}
-
-/* ══════════════════════════════════════════════════════════════════
-   TOP-BAR (Mode Toggle)
-══════════════════════════════════════════════════════════════════ */
-#top-bar {
-  position: fixed;
-  top: 16px; right: 20px;
-  z-index: 2000;
-}
-
-.mode-btn {
-  width: 38px; height: 38px;
-  border-radius: 50%;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--muted);
-  cursor: pointer;
-  font-size: 16px;
-  display: flex; align-items: center; justify-content: center;
-  transition: all 0.25s;
-  backdrop-filter: blur(8px);
-}
-.mode-btn:hover { color: var(--text); border-color: var(--accent); }
-
-/* ══════════════════════════════════════════════════════════════════
-   HERO
-══════════════════════════════════════════════════════════════════ */
-#hero {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 80px 24px;
-  position: relative;
-  background: var(--bg);
-  transition: background 0.5s ease;
-}
-
-/* Subtiler radialer Schimmer in Akzentfarbe */
-#hero::before {
-  content: '';
-  position: absolute; inset: 0;
-  background: radial-gradient(ellipse 65% 55% at 50% 48%, var(--accent-bg) 0%, transparent 70%);
-  pointer-events: none;
-  transition: background 0.5s ease;
-}
-
-.hero-eyebrow {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 24px;
-  position: relative;
-}
-
-.hero-number {
-  font-family: 'Playfair Display', serif;
-  font-size: clamp(84px, 18vw, 220px);
-  font-weight: 900;
-  line-height: 0.87;
-  letter-spacing: -0.03em;
-  color: var(--text);
-  position: relative;
-}
-.hero-number .plus { color: var(--accent); }
-
-.hero-tagline {
-  font-size: clamp(14px, 1.7vw, 18px);
-  font-weight: 300;
-  color: var(--text2);
-  margin-top: 20px;
-  max-width: 420px;
-  line-height: 1.7;
-  position: relative;
-}
-.hero-tagline strong { color: var(--text); font-weight: 500; }
-
-/* Toggle */
-.hero-toggle {
-  display: flex;
-  gap: 3px;
-  margin-top: 44px;
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: 100px;
-  padding: 4px;
-  position: relative;
-  transition: background 0.5s, border-color 0.5s;
-}
-
-.toggle-btn {
-  padding: 10px 32px;
-  border-radius: 100px;
-  border: none;
-  font-family: 'Inter', sans-serif;
-  font-size: 13px; font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  background: transparent;
-  color: var(--muted);
-  letter-spacing: 0.02em;
-}
-.toggle-btn.active {
-  background: var(--accent);
-  color: #fff;
-  box-shadow: 0 2px 12px var(--accent-bg);
-}
-.toggle-btn:not(.active):hover { color: var(--text); }
-
-/* Scroll Prompt */
-#scroll-prompt {
-  position: absolute;
-  bottom: 28px; left: 50%;
-  transform: translateX(-50%);
-  display: flex; flex-direction: column;
-  align-items: center; gap: 10px;
-  opacity: 0; transition: opacity 1s ease;
-  cursor: pointer;
-}
-#scroll-prompt.visible { opacity: 1; }
-
-.scroll-text {
-  font-size: 10px; font-weight: 500;
-  letter-spacing: 0.2em; text-transform: uppercase;
-  color: var(--muted);
-}
-.scroll-bar {
-  width: 1px; height: 40px;
-  background: var(--border); position: relative; overflow: hidden;
-}
-.scroll-bar::after {
-  content: '';
-  position: absolute; top: -100%; left: 0;
-  width: 100%; height: 100%;
-  background: var(--accent);
-  animation: barDrop 2s ease-in-out infinite;
-}
-@keyframes barDrop { from { top: -100%; } to { top: 100%; } }
-
-/* ══════════════════════════════════════════════════════════════════
-   FILTER-BAR
-══════════════════════════════════════════════════════════════════ */
-#filter-bar {
-  position: sticky; top: 0; z-index: 1000;
-  background: var(--bg);
-  border-bottom: 1px solid var(--border);
-  padding: 10px 20px;
-  display: flex; align-items: center;
-  gap: 12px; flex-wrap: wrap;
-  transition: background 0.5s, border-color 0.5s;
-}
-/* Glasmorphismus-Effekt */
-#filter-bar::before {
-  content: '';
-  position: absolute; inset: 0;
-  backdrop-filter: blur(12px);
-  z-index: -1;
-}
-
-.filter-label {
-  font-size: 10px; font-weight: 600;
-  letter-spacing: 0.18em; text-transform: uppercase;
-  color: var(--muted); white-space: nowrap;
-}
-.filter-sep { width: 1px; height: 16px; background: var(--border); flex-shrink: 0; }
-.filter-group { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
-
-/* Pills */
-.pill {
-  padding: 5px 13px; border-radius: 100px;
-  border: 1px solid var(--border);
-  background: transparent; color: var(--muted);
-  font-family: 'Inter', sans-serif;
-  font-size: 12px; font-weight: 500;
-  cursor: pointer; transition: all 0.2s; white-space: nowrap;
-}
-.pill:hover { border-color: var(--text); color: var(--text); }
-.pill.active { background: var(--accent); border-color: var(--accent); color: #fff; }
-
-/* Kategorie-Badges */
-.badge-btn {
-  display: flex; align-items: center; gap: 6px;
-  padding: 5px 13px; border-radius: 100px;
-  border: 1px solid transparent; background: transparent;
-  cursor: pointer; font-family: 'Inter', sans-serif;
-  font-size: 12px; font-weight: 500;
-  transition: all 0.2s; white-space: nowrap;
-}
-.badge-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-.badge-btn.cr { color: var(--cr); border-color: rgba(200,57,42,0.28); }
-.badge-btn.en { color: var(--en); border-color: rgba(200,120,40,0.28); }
-.badge-btn.vu { color: var(--vu); border-color: rgba(168,144,40,0.28); }
-.badge-btn.cr .badge-dot { background: var(--cr); }
-.badge-btn.en .badge-dot { background: var(--en); }
-.badge-btn.vu .badge-dot { background: var(--vu); }
-.badge-btn.active.cr { background: var(--cr-dim); }
-.badge-btn.active.en { background: var(--en-dim); }
-.badge-btn.active.vu { background: var(--vu-dim); }
-.badge-btn.dimmed { opacity: 0.28; }
-
-/* ══════════════════════════════════════════════════════════════════
-   KARTE
-══════════════════════════════════════════════════════════════════ */
-#map {
-  width: 100%;
-  height: calc(100vh - 53px);
-  min-height: 500px;
-}
-
-/* Leaflet Overrides */
-.leaflet-container { background: var(--bg) !important; font-family: 'Inter', sans-serif; }
-.leaflet-control-zoom a {
-  background: var(--surface) !important; color: var(--text) !important;
-  border-color: var(--border) !important; font-size: 16px !important;
-  transition: background 0.2s !important;
-}
-.leaflet-control-zoom a:hover { background: var(--bg2) !important; }
-.leaflet-control-attribution {
-  background: var(--bg) !important; color: var(--muted) !important;
-  font-size: 9px !important; border-top: 1px solid var(--border) !important;
-}
-.leaflet-control-attribution a { color: var(--muted) !important; }
-
-/* Custom Marker */
-.cmarker {
-  width: 14px; height: 14px; border-radius: 50%;
-  border: 2.5px solid var(--bg);
-  cursor: pointer;
-  transition: transform 0.15s, box-shadow 0.15s;
-  position: relative;
-}
-.cmarker:hover { transform: scale(1.8); }
-.cmarker::after {
-  content: '';
-  position: absolute; inset: -4px;
-  border-radius: 50%;
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-.cmarker:hover::after { opacity: 1; }
-
-.m-cr { background: var(--cr); box-shadow: 0 0 0 2px rgba(200,57,42,0.3); }
-.m-en { background: var(--en); box-shadow: 0 0 0 2px rgba(200,120,40,0.3); }
-.m-vu { background: var(--vu); box-shadow: 0 0 0 2px rgba(168,144,40,0.3); }
-
-/* Popup */
-.leaflet-popup-content-wrapper {
-  background: var(--surface) !important;
-  border: 1px solid var(--border) !important;
-  border-radius: 16px !important;
-  box-shadow: 0 24px 64px rgba(0,0,0,0.4) !important;
-  padding: 0 !important;
-  overflow: hidden;
-}
-.leaflet-popup-tip-container { display: none !important; }
-.leaflet-popup-content { margin: 0 !important; width: 292px !important; }
-.leaflet-popup-close-button {
-  color: var(--muted) !important; font-size: 20px !important;
-  top: 8px !important; right: 12px !important;
-  z-index: 10; background: transparent !important;
-  width: 28px !important; height: 28px !important;
-}
-
-.popup-img {
-  width: 100%; height: 168px;
-  object-fit: cover; display: block;
-}
-[data-mode="dark"]  .popup-img { filter: brightness(0.8) saturate(0.9); }
-[data-mode="light"] .popup-img { filter: brightness(0.92); }
-
-.popup-body { padding: 16px 18px 18px; }
-
-.popup-badge {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 3px 10px; border-radius: 100px;
-  font-size: 11px; font-weight: 600;
-  margin-bottom: 10px;
-}
-.popup-badge.CR { background: var(--cr-dim); color: var(--cr); }
-.popup-badge.EN { background: var(--en-dim); color: var(--en); }
-.popup-badge.VU { background: var(--vu-dim); color: var(--vu); }
-
-.popup-name {
-  font-family: 'Playfair Display', serif;
-  font-size: 20px; font-weight: 700;
-  color: var(--text); line-height: 1.2; margin-bottom: 3px;
-}
-.popup-sci {
-  font-size: 12px; color: var(--muted);
-  font-style: italic; margin-bottom: 14px;
-}
-.popup-facts { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
-.popup-fact { display: flex; align-items: baseline; gap: 8px; }
-.popup-fact-lbl {
-  font-size: 10px; font-weight: 600;
-  letter-spacing: 0.1em; text-transform: uppercase;
-  color: var(--muted); min-width: 72px; flex-shrink: 0;
-}
-.popup-fact-val { font-size: 13px; color: var(--text); line-height: 1.4; }
-
-.popup-btn {
-  display: block; width: 100%; padding: 11px;
-  background: var(--accent); color: #fff;
-  border: none; border-radius: 8px;
-  font-family: 'Inter', sans-serif;
-  font-size: 13px; font-weight: 600;
-  cursor: pointer; text-align: center;
-  text-decoration: none; transition: opacity 0.2s;
-  letter-spacing: 0.01em;
-}
-.popup-btn:hover { opacity: 0.85; }
-
-/* ══════════════════════════════════════════════════════════════════
-   INFOBEREICH
-══════════════════════════════════════════════════════════════════ */
-#info-section {
-  background: var(--bg2);
-  border-top: 1px solid var(--border);
-  padding: 72px 24px 80px;
-  transition: background 0.5s, border-color 0.5s;
-}
-.info-inner { max-width: 1080px; margin: 0 auto; }
-
-.status-row {
-  display: flex; gap: 20px; flex-wrap: wrap;
-  padding: 26px 0;
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 56px;
-}
-.status-item { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 175px; }
-.sdot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-.sdot.cr { background: var(--cr); }
-.sdot.en { background: var(--en); }
-.sdot.vu { background: var(--vu); }
-.scode { font-size: 12px; font-weight: 600; color: var(--text); }
-.sdesc { font-size: 12px; color: var(--muted); }
-
-.info-grid {
-  display: grid; grid-template-columns: repeat(3,1fr);
-  gap: 48px; margin-bottom: 56px;
-}
-@media (max-width: 760px) { .info-grid { grid-template-columns: 1fr; gap: 32px; } }
-
-.info-eyebrow {
-  font-size: 10px; font-weight: 600;
-  letter-spacing: 0.2em; text-transform: uppercase;
-  color: var(--accent); margin-bottom: 10px;
-}
-.info-block h3 {
-  font-family: 'Playfair Display', serif;
-  font-size: 20px; font-weight: 700;
-  color: var(--text); margin-bottom: 10px; line-height: 1.3;
-}
-.info-block p { font-size: 14px; color: var(--text2); line-height: 1.78; }
-.info-block a { color: var(--accent); }
-
-.info-cta { text-align: center; padding-top: 8px; }
-.info-cta p { font-size: 12px; color: var(--muted); margin-bottom: 14px; }
-.info-cta a {
-  display: inline-block; padding: 11px 28px;
-  border: 1px solid var(--border); border-radius: 100px;
-  color: var(--muted); text-decoration: none;
-  font-size: 13px; transition: all 0.2s;
-}
-.info-cta a:hover { border-color: var(--accent); color: var(--accent); }
-
-/* Footer */
-footer {
-  background: var(--bg); border-top: 1px solid var(--border);
-  padding: 20px 24px; text-align: center;
-  font-size: 11px; color: var(--muted);
-  transition: background 0.5s;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
-}
-</style>
+  <script src="js/config.js"></script>
 </head>
-<body>
+<body class="t-dark">
 
-<div id="top-bar">
-  <button class="mode-btn" id="mode-btn" onclick="toggleMode()" title="Light / Dark Mode">🌙</button>
-</div>
-
-<!-- ══ HERO ════════════════════════════════════════════════════════ -->
-<section id="hero">
-  <p class="hero-eyebrow">IUCN Red List · Stand 2025</p>
-
-  <div class="hero-number">
-    <span id="counter">0</span><span class="plus">+</span>
+<!-- NAV -->
+<nav id="nav">
+  <div class="nav-logo">Verlorene <span>Welten</span></div>
+  <div class="nav-right">
+    <div class="nav-toggle">
+      <button class="ntb on" onclick="setTyp('tiere',this)">Tiere</button>
+      <button class="ntb"    onclick="setTyp('pflanzen',this)">Pflanzen</button>
+    </div>
+    <button class="btn-mode" id="modeBtn" onclick="toggleMode()" title="Light/Dark">🌙</button>
   </div>
+</nav>
 
-  <p class="hero-tagline">
-    bedrohte Arten weltweit.<br>
-    <strong>Tiere. Pflanzen. Für immer.</strong>
-  </p>
-
-  <div class="hero-toggle">
-    <button class="toggle-btn active" onclick="setTyp('tiere',this)">Tiere</button>
-    <button class="toggle-btn"        onclick="setTyp('pflanzen',this)">Pflanzen</button>
+<!-- HERO -->
+<section class="hero" id="hero">
+  <div class="hero-bg" id="heroBg" style="background-image:url('https://images.unsplash.com/photo-1474511320723-9a56873867b5?w=1600&q=80')"></div>
+  <div class="hero-c">
+    <p class="hero-eye">IUCN Red List · Stand 2025</p>
+    <div class="hero-num"><span id="counter">0</span><span class="ac">+</span></div>
+    <p class="hero-sub">bedrohte Arten weltweit.<br><strong>Tiere. Pflanzen. Für immer.</strong></p>
   </div>
-
   <div id="scroll-prompt" onclick="document.getElementById('map-section').scrollIntoView({behavior:'smooth'})">
-    <span class="scroll-text">Erkunde die Welten</span>
-    <div class="scroll-bar"></div>
+    <span class="sp-t">Erkunde die Welten</span>
+    <div class="sp-b"></div>
   </div>
 </section>
 
-<!-- ══ KARTE ════════════════════════════════════════════════════════ -->
+<!-- FILTER + KARTE -->
 <section id="map-section">
   <div id="filter-bar">
-    <span class="filter-label">Region</span>
-    <div class="filter-group" id="region-filters">
-      <button class="pill active" onclick="filterRegion('alle',this)">Alle</button>
-      <button class="pill" onclick="filterRegion('Afrika',this)">Afrika</button>
-      <button class="pill" onclick="filterRegion('Asien',this)">Asien</button>
-      <button class="pill" onclick="filterRegion('Amerika',this)">Amerika</button>
-      <button class="pill" onclick="filterRegion('Europa',this)">Europa</button>
-      <button class="pill" onclick="filterRegion('Ozeanien',this)">Ozeanien</button>
-      <button class="pill" onclick="filterRegion('Ozean',this)">Ozean</button>
+    <span class="fl">Region</span>
+    <div class="fg" id="regionF">
+      <button class="pill on" onclick="filterReg('alle',this)">Alle</button>
+      <button class="pill" onclick="filterReg('Afrika',this)">Afrika</button>
+      <button class="pill" onclick="filterReg('Asien',this)">Asien</button>
+      <button class="pill" onclick="filterReg('Amerika',this)">Amerika</button>
+      <button class="pill" onclick="filterReg('Europa',this)">Europa</button>
+      <button class="pill" onclick="filterReg('Ozeanien',this)">Ozeanien</button>
+      <button class="pill" onclick="filterReg('Ozean',this)">Ozean</button>
     </div>
-    <div class="filter-sep"></div>
-    <span class="filter-label">Bedrohung</span>
-    <div class="filter-group">
-      <button class="badge-btn cr active" onclick="filterKat('CR',this)"><span class="badge-dot"></span>CR – Kritisch</button>
-      <button class="badge-btn en active" onclick="filterKat('EN',this)"><span class="badge-dot"></span>EN – Gefährdet</button>
-      <button class="badge-btn vu active" onclick="filterKat('VU',this)"><span class="badge-dot"></span>VU – Anfällig</button>
+    <div class="fsep"></div>
+    <span class="fl">Bedrohung</span>
+    <div class="fg">
+      <button class="bb cr on" onclick="filterKat('CR',this)"><span class="bdot"></span>CR – Kritisch</button>
+      <button class="bb en on" onclick="filterKat('EN',this)"><span class="bdot"></span>EN – Gefährdet</button>
+      <button class="bb vu on" onclick="filterKat('VU',this)"><span class="bdot"></span>VU – Anfällig</button>
     </div>
   </div>
   <div id="map"></div>
 </section>
 
-<!-- ══ INFO ═════════════════════════════════════════════════════════ -->
-<section id="info-section">
-  <div class="info-inner">
-    <div class="status-row">
-      <div class="status-item"><span class="sdot cr"></span><div><div class="scode">CR — Kritisch gefährdet</div><div class="sdesc">Vom Aussterben bedroht. Höchste Dringlichkeit.</div></div></div>
-      <div class="status-item"><span class="sdot en"></span><div><div class="scode">EN — Gefährdet</div><div class="sdesc">Hohes Aussterberisiko. Starke Bestandsrückgänge.</div></div></div>
-      <div class="status-item"><span class="sdot vu"></span><div><div class="scode">VU — Anfällig</div><div class="sdesc">Erhöhtes Risiko. Beobachtung und Schutz nötig.</div></div></div>
+<!-- INFO UNTER KARTE -->
+<section id="info">
+  <div class="ii">
+    <div class="sr">
+      <div class="si"><span class="sdot cr"></span><div><div class="sc">CR — Kritisch gefährdet</div><div class="sd">Vom Aussterben bedroht. Höchste Dringlichkeit.</div></div></div>
+      <div class="si"><span class="sdot en"></span><div><div class="sc">EN — Gefährdet</div><div class="sd">Hohes Aussterberisiko. Starke Rückgänge.</div></div></div>
+      <div class="si"><span class="sdot vu"></span><div><div class="sc">VU — Anfällig</div><div class="sd">Erhöhtes Risiko. Beobachtung nötig.</div></div></div>
     </div>
-    <div class="info-grid">
-      <div class="info-block">
-        <p class="info-eyebrow">Was ist die IUCN Red List?</p>
+    <div class="ig">
+      <div class="ib">
+        <p class="ib-e">Was ist die IUCN Red List?</p>
         <h3>Die wichtigste Datenbank der Welt</h3>
-        <p>Seit 1964 bewertet die IUCN den Gefährdungsstatus von Arten weltweit. Über 172.000 Arten wurden bisher untersucht — jedes Jahr werden die Zahlen schlechter. <a href="https://www.iucnredlist.org" target="_blank">iucnredlist.org →</a></p>
+        <p>Seit 1964 bewertet die IUCN den Gefährdungsstatus von Arten weltweit. Über 172.000 Arten wurden untersucht. Jedes Jahr werden die Zahlen schlechter. <a href="https://www.iucnredlist.org" target="_blank">iucnredlist.org →</a></p>
       </div>
-      <div class="info-block">
-        <p class="info-eyebrow">Warum stirbt so viel aus?</p>
+      <div class="ib">
+        <p class="ib-e">Warum stirbt so viel aus?</p>
         <h3>Fünf Hauptursachen</h3>
-        <p>Habitatverlust durch Abholzung und Landwirtschaft. Klimawandel. Wilderei und illegaler Handel. Überfischung. Invasive Arten. In den meisten Fällen wirken alle gleichzeitig.</p>
+        <p>Habitatverlust durch Abholzung. Klimawandel. Wilderei. Überfischung. Invasive Arten. In den meisten Fällen wirken alle gleichzeitig — und verstärken sich gegenseitig.</p>
       </div>
-      <div class="info-block">
-        <p class="info-eyebrow">Was sind Botschafter-Arten?</p>
+      <div class="ib">
+        <p class="ib-e">Was sind Botschafter-Arten?</p>
         <h3>24 von 47.000+</h3>
-        <p>Diese 24 Arten stehen stellvertretend für tausende weitere. Jede erzählt eine andere Geschichte — über Palmöl, Plastikmüll, Klimawandel, Wilderei. Wer eine versteht, versteht das System.</p>
+        <p>Diese 24 Arten stehen stellvertretend für tausende weitere. Jede erzählt eine andere Geschichte — über Palmöl, Plastik, Klimawandel, Wilderei. Wer eine versteht, versteht das System.</p>
       </div>
     </div>
-    <div class="info-cta">
+    <div class="ic">
       <p>Quellen: IUCN Red List · WWF · GBIF · Wikimedia Commons</p>
       <a href="https://www.iucnredlist.org" target="_blank">IUCN Red List erkunden →</a>
     </div>
   </div>
 </section>
 
-<footer>Verlorene Welten · Interaktive Karte bedrohter Arten · Daten: IUCN Red List, WWF, GBIF · Bilder: Wikimedia Commons (CC-Lizenzen)</footer>
+<footer>Verlorene Welten · Interaktive Karte bedrohter Arten · Daten: IUCN Red List, WWF, GBIF · Bilder: Wikimedia Commons (CC-Lizenzen) · <a href="https://supabase.com" target="_blank">Powered by Supabase</a></footer>
 
 <script>
 // ── State ──────────────────────────────────────────────────────────
-let arten = [], aktTyp = 'tiere', aktRegion = 'alle';
-let aktKats = new Set(['CR','EN','VU']);
-let markerObjs = [], map, tileDark, tileLight;
-let isDark = true;
+let typ = 'tiere', reg = 'alle', kats = new Set(['CR','EN','VU']);
+let arten = [], mrks = [], map;
+let isDark = true, isTier = true;
+let tileDk, tileLt;
+
+// Hintergründe je Typ
+const BGHERO = {
+  tiere:   'https://images.unsplash.com/photo-1474511320723-9a56873867b5?w=1600&q=80',
+  pflanzen:'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=1600&q=80'
+};
 
 // ── Counter ────────────────────────────────────────────────────────
-(function(){
-  let started = false;
-  function start() {
-    if (started) return; started = true;
-    const el = document.getElementById('counter');
-    const target = 47000, ms = 2600, t0 = Date.now();
-    function tick() {
-      const p = Math.min((Date.now()-t0)/ms, 1);
-      const e = 1 - Math.pow(1-p, 3);
-      el.textContent = Math.round(e*target).toLocaleString('de-DE');
-      if (p < 1) requestAnimationFrame(tick);
-      else {
-        el.textContent = target.toLocaleString('de-DE');
-        setTimeout(()=>document.getElementById('scroll-prompt').classList.add('visible'), 800);
-      }
-    }
+(()=>{
+  let started=false;
+  function go(){
+    if(started)return; started=true;
+    const el=document.getElementById('counter');
+    const t=Date.now(), ms=2600, target=47000;
+    const tick=()=>{
+      const p=Math.min((Date.now()-t)/ms,1);
+      const e=1-Math.pow(1-p,3);
+      el.textContent=Math.round(e*target).toLocaleString('de-DE');
+      if(p<1) requestAnimationFrame(tick);
+      else{el.textContent=target.toLocaleString('de-DE'); setTimeout(()=>document.getElementById('scroll-prompt').classList.add('show'),700);}
+    };
     requestAnimationFrame(tick);
   }
-  window.addEventListener('load', ()=>setTimeout(start, 200));
+  window.addEventListener('load',()=>setTimeout(go,200));
 })();
 
-// ── Mode ───────────────────────────────────────────────────────────
-function toggleMode() {
-  isDark = !isDark;
-  const html = document.documentElement;
-  html.setAttribute('data-mode', isDark ? 'dark' : 'light');
-  document.getElementById('mode-btn').textContent = isDark ? '☀️' : '🌙';
-  if (isDark) {
-    if (tileLight && map.hasLayer(tileLight)) map.removeLayer(tileLight);
-    if (tileDark && !map.hasLayer(tileDark)) tileDark.addTo(map);
-  } else {
-    if (tileDark && map.hasLayer(tileDark)) map.removeLayer(tileDark);
-    if (tileLight && !map.hasLayer(tileLight)) tileLight.addTo(map);
-  }
+// ── Theme ──────────────────────────────────────────────────────────
+function applyTheme(){
+  const b=document.body;
+  b.className = isTier ? (isDark?'t-dark':'t-light') : (isDark?'p-dark':'p-light');
+  document.getElementById('modeBtn').textContent = isDark?'☀️':'🌙';
+  document.getElementById('heroBg').style.backgroundImage = `url('${BGHERO[typ]}')`;
+  if(map){ updateTile(); }
 }
 
-// ── Typ Toggle ────────────────────────────────────────────────────
-function setTyp(typ, btn) {
-  aktTyp = typ;
-  document.querySelectorAll('.toggle-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  document.documentElement.setAttribute('data-typ', typ);
-  aktRegion = 'alle';
-  document.querySelectorAll('#region-filters .pill').forEach(b=>b.classList.toggle('active', b.textContent==='Alle'));
+function toggleMode(){ isDark=!isDark; applyTheme(); }
+
+function setTyp(t,btn){
+  typ=t; isTier=(t==='tiere');
+  document.querySelectorAll('.ntb').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  reg='alle';
+  document.querySelectorAll('#regionF .pill').forEach(b=>b.classList.toggle('on',b.textContent==='Alle'));
+  applyTheme();
   laden();
 }
 
-// ── Map init ──────────────────────────────────────────────────────
-function initMap() {
-  map = L.map('map', {
-    center: [20,15], zoom: 2,
-    minZoom: 2, maxZoom: 10,
-    worldCopyJump: false,
-    maxBounds: [[-90,-200],[90,200]],
-    maxBoundsViscosity: 0.9
-  });
-
-  tileDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
-    attribution: '© <a href="https://openstreetmap.org">OSM</a> © <a href="https://carto.com">CARTO</a>',
-    subdomains: 'abcd', maxZoom: 20
-  }).addTo(map);
-
-  tileLight = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
-    attribution: '© <a href="https://openstreetmap.org">OSM</a> © <a href="https://carto.com">CARTO</a>',
-    subdomains: 'abcd', maxZoom: 20
-  });
-
+// ── Karte ──────────────────────────────────────────────────────────
+function initMap(){
+  map=L.map('map',{center:[20,15],zoom:2,minZoom:2,maxZoom:10,worldCopyJump:false,maxBounds:[[-90,-200],[90,200]],maxBoundsViscosity:.9});
+  tileDk=L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',{attribution:'© <a href="https://openstreetmap.org">OSM</a> © <a href="https://carto.com">CARTO</a>',subdomains:'abcd',maxZoom:20}).addTo(map);
+  tileLt=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',{attribution:'© <a href="https://openstreetmap.org">OSM</a> © <a href="https://carto.com">CARTO</a>',subdomains:'abcd',maxZoom:20});
   laden();
 }
 
-// ── Daten laden ───────────────────────────────────────────────────
-async function laden() {
-  try {
-    const r = await fetch(aktTyp==='tiere' ? 'data/tiere.json' : 'data/pflanzen.json');
-    arten = r.ok ? await r.json() : [];
-  } catch { arten = []; }
+function updateTile(){
+  if(isDark){ if(map.hasLayer(tileLt))map.removeLayer(tileLt); if(!map.hasLayer(tileDk))tileDk.addTo(map); }
+  else      { if(map.hasLayer(tileDk))map.removeLayer(tileDk); if(!map.hasLayer(tileLt))tileLt.addTo(map); }
+}
+
+// ── Daten ──────────────────────────────────────────────────────────
+async function laden(){
+  try{ arten = await VW.ladeArten(typ==='tiere'?'tier':'pflanze'); }
+  catch(e){ arten=[]; console.error(e); }
   renderMarker();
 }
 
-// ── Marker ────────────────────────────────────────────────────────
-function renderMarker() {
-  markerObjs.forEach(m=>map.removeLayer(m));
-  markerObjs = [];
-
+// ── Marker ─────────────────────────────────────────────────────────
+function renderMarker(){
+  mrks.forEach(m=>map.removeLayer(m));
+  mrks=[];
   arten
-    .filter(a=>(aktRegion==='alle'||a.region===aktRegion) && aktKats.has(a.kategorie))
-    .forEach(art=>{
-      const cls = 'm-'+art.kategorie.toLowerCase();
-      const icon = L.divIcon({
-        className:'',
-        html:`<div class="cmarker ${cls}"></div>`,
-        iconSize:[14,14], iconAnchor:[7,7], popupAnchor:[0,-12]
-      });
-      const m = L.marker([art.lat,art.lng],{icon})
-        .bindPopup(popup(art),{maxWidth:310,minWidth:292,autoPan:true})
-        .addTo(map);
-      markerObjs.push(m);
+    .filter(a=>(reg==='alle'||a.region===reg) && kats.has(a.kategorie) && a.lat && a.lng)
+    .forEach(a=>{
+      const cls='cm-'+a.kategorie.toLowerCase();
+      const icon=L.divIcon({className:'',html:`<div class="cm ${cls}"></div>`,iconSize:[14,14],iconAnchor:[7,7],popupAnchor:[0,-10]});
+      const m=L.marker([a.lat,a.lng],{icon}).bindPopup(popup(a),{maxWidth:300,minWidth:284,autoPan:true}).addTo(map);
+      mrks.push(m);
     });
 }
 
-// ── Popup HTML ────────────────────────────────────────────────────
-function popup(art) {
+// ── Popup ──────────────────────────────────────────────────────────
+function popup(a){
   const lbl={CR:'Kritisch gefährdet',EN:'Gefährdet',VU:'Anfällig'};
+  const detailLink = `detail.html?id=${a.art_id}&typ=${a.typ}`;
   return `
-<img class="popup-img" src="${art.bild_url}" alt="${art.name_de}" loading="lazy" onerror="this.style.height='0';this.style.minHeight='0'">
-<div class="popup-body">
-  <span class="popup-badge ${art.kategorie}"><span style="width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block;margin-right:2px"></span>${art.kategorie} · ${lbl[art.kategorie]}</span>
-  <div class="popup-name">${art.name_de}</div>
-  <div class="popup-sci">${art.name_wissenschaft}</div>
-  <div class="popup-facts">
-    <div class="popup-fact"><span class="popup-fact-lbl">Bestand</span><span class="popup-fact-val">${art.population}</span></div>
-    <div class="popup-fact"><span class="popup-fact-lbl">Region</span><span class="popup-fact-val">${art.land}</span></div>
-    <div class="popup-fact"><span class="popup-fact-lbl">Bedrohung</span><span class="popup-fact-val">${art.hauptbedrohung}</span></div>
+<img class="pi" src="${a.bild_url||''}" alt="${a.name_de}" loading="lazy" onerror="this.style.height='0'">
+<div class="pb">
+  <span class="pbadge ${a.kategorie}"><span style="width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block;margin-right:2px"></span>${a.kategorie} · ${lbl[a.kategorie]}</span>
+  <div class="pn">${a.name_de}</div>
+  <div class="ps">${a.name_wissenschaft||''}</div>
+  <div class="pf">
+    <div class="pfl"><span class="pll">Bestand</span><span class="plv">${a.population_wild||'–'}</span></div>
+    <div class="pfl"><span class="pll">Region</span><span class="plv">${a.land||a.region||'–'}</span></div>
+    <div class="pfl"><span class="pll">Bedrohung</span><span class="plv">${a.hauptbedrohung||'–'}</span></div>
   </div>
-  <a class="popup-btn" href="detail.html?id=${art.id}&typ=${aktTyp}">Mehr erfahren →</a>
+  <a class="pbtn" href="${detailLink}">Mehr erfahren →</a>
 </div>`;
 }
 
-// ── Filter: Region ────────────────────────────────────────────────
-function filterRegion(r, btn) {
-  aktRegion = r;
-  document.querySelectorAll('#region-filters .pill').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  const z={
-    'Afrika':{c:[5,20],z:3},'Asien':{c:[25,95],z:3},
-    'Amerika':{c:[5,-75],z:3},'Europa':{c:[52,15],z:4},
-    'Ozeanien':{c:[-30,155],z:4},'Ozean':{c:[0,0],z:2},
-    'alle':{c:[20,15],z:2}
-  };
-  const t=z[r]||z['alle'];
+// ── Filter ─────────────────────────────────────────────────────────
+function filterReg(r,btn){
+  reg=r;
+  document.querySelectorAll('#regionF .pill').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  const z={Afrika:{c:[5,20],z:3},Asien:{c:[25,95],z:3},Amerika:{c:[5,-75],z:3},Europa:{c:[52,15],z:4},Ozeanien:{c:[-30,155],z:4},Ozean:{c:[0,0],z:2},alle:{c:[20,15],z:2}};
+  const t=z[r]||z.alle;
   map.flyTo(t.c,t.z,{duration:1.1});
   renderMarker();
 }
 
-// ── Filter: Kategorie ─────────────────────────────────────────────
-function filterKat(k, btn) {
-  if (aktKats.has(k)) {
-    if (aktKats.size>1) { aktKats.delete(k); btn.classList.remove('active'); btn.classList.add('dimmed'); }
-  } else { aktKats.add(k); btn.classList.add('active'); btn.classList.remove('dimmed'); }
+function filterKat(k,btn){
+  if(kats.has(k)){ if(kats.size>1){kats.delete(k);btn.classList.remove('on');btn.classList.add('dim');} }
+  else{ kats.add(k);btn.classList.add('on');btn.classList.remove('dim'); }
   renderMarker();
 }
 
+// ── Start ──────────────────────────────────────────────────────────
 initMap();
 </script>
 </body>

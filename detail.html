@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verlorene Welten — Art</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="js/config.js"></script>
+</head>
+<body class="t-dark">
+
+<!-- NAV -->
+<nav id="nav">
+  <div class="nav-logo">Verlorene <span>Welten</span></div>
+  <div class="nav-right">
+    <a href="index.html" style="font-size:12px;color:var(--mu);padding:6px 12px;border:1px solid var(--brd);border-radius:100px;transition:all .2s" onmouseover="this.style.color='var(--tx)'" onmouseout="this.style.color='var(--mu)'">← Zurück zur Karte</a>
+    <button class="btn-mode" id="modeBtn" onclick="toggleMode()" title="Light/Dark">🌙</button>
+  </div>
+</nav>
+
+<!-- CONTENT (wird per JS befüllt) -->
+<div id="content" style="padding-top:65px">
+  <div class="loader">Lade Artdaten…</div>
+</div>
+
+<footer>Verlorene Welten · Daten: IUCN Red List, WWF, GBIF · Bilder: Wikimedia Commons (CC-Lizenzen)</footer>
+
+<script>
+// ── URL-Parameter ─────────────────────────────────────────────────
+const p = new URLSearchParams(location.search);
+const ART_ID = parseInt(p.get('id'));
+const TYP    = p.get('typ') || 'tier';
+let isDark   = true;
+let dmap;
+
+// ── Theme ─────────────────────────────────────────────────────────
+function applyTheme(){
+  document.body.className = (TYP==='tier') ? (isDark?'t-dark':'t-light') : (isDark?'p-dark':'p-light');
+  document.getElementById('modeBtn').textContent = isDark?'☀️':'🌙';
+}
+function toggleMode(){ isDark=!isDark; applyTheme(); }
+
+// ── Hilfsfunktionen ───────────────────────────────────────────────
+function kat(k){ const l={CR:'Kritisch gefährdet',EN:'Gefährdet',VU:'Anfällig'}; return l[k]||k; }
+
+function fmtPop(n){
+  if(!n && n!==0) return '–';
+  if(n>=1000000) return (n/1000000).toFixed(1).replace('.',',')+' Mio.';
+  if(n>=1000)    return (n/1000).toFixed(0)+'.000';
+  return n.toLocaleString('de-DE');
+}
+
+// ── Populationsgrafik ─────────────────────────────────────────────
+function renderPopChart(pop, containerId){
+  if(!pop||!pop.length){ document.getElementById(containerId).innerHTML='<p style="color:var(--mu);font-size:13px">Keine Populationsdaten verfügbar.</p>'; return; }
+  const max = Math.max(...pop.map(p=>p.wert||0)) || 1;
+  const bars = pop.map(p=>{
+    const h = Math.max(4, Math.round(((p.wert||0)/max)*100));
+    return `<div class="pc-bw"><div class="pc-v">${fmtPop(p.wert)}</div><div class="pc-b" style="height:${h}px"></div><div class="pc-y">${p.jahr}</div></div>`;
+  }).join('');
+  document.getElementById(containerId).innerHTML=`<div class="pc-wrap"><p class="pc-t">Populationsentwicklung (${pop[0].einheit||'Individuen'})</p><div class="pc-bars">${bars}</div></div>`;
+}
+
+// ── Detail-Karte ──────────────────────────────────────────────────
+function renderDetailMap(art, polygone){
+  if(!dmap){
+    dmap = L.map('detail-map',{center:[art.lat||20,art.lng||0],zoom:4,zoomControl:true});
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',{attribution:'© OSM © CARTO',subdomains:'abcd'}).addTo(dmap);
+  } else {
+    dmap.setView([art.lat||20,art.lng||0],4);
+  }
+
+  // Marker
+  if(art.lat && art.lng){
+    const cls='cm-'+(art.kategorie||'cr').toLowerCase();
+    const icon=L.divIcon({className:'',html:`<div class="cm ${cls}" style="width:18px;height:18px"></div>`,iconSize:[18,18],iconAnchor:[9,9]});
+    L.marker([art.lat,art.lng],{icon}).bindPopup(`<b>${art.name_de}</b>`).addTo(dmap);
+  }
+
+  // Verbreitungspolygone
+  if(polygone && polygone.length){
+    const hist = polygone.filter(p=>p.polygon_typ==='historisch');
+    const aktu = polygone.filter(p=>p.polygon_typ==='aktuell');
+    const group = pts => {
+      const pts_sorted = pts.sort((a,b)=>a.punkt_nr-b.punkt_nr);
+      return pts_sorted.map(p=>[p.lat,p.lng]);
+    };
+    if(hist.length) L.polygon(group(hist),{color:'#888',fillColor:'#888',fillOpacity:.15,weight:1,dashArray:'4'}).bindTooltip('Histor. Verbreitung').addTo(dmap);
+    if(aktu.length) L.polygon(group(aktu),{color:'var(--ac)',fillColor:'#C2441C',fillOpacity:.25,weight:2}).bindTooltip('Aktuelle Verbreitung').addTo(dmap);
+  }
+}
+
+// ── Bedrohungskarten ───────────────────────────────────────────────
+function renderBedrohungen(bedro, containerId){
+  if(!bedro||!bedro.length){ document.getElementById(containerId).innerHTML='<p style="color:var(--mu);font-size:13px">Keine Bedrohungsdaten verfügbar.</p>'; return; }
+  document.getElementById(containerId).innerHTML = `<div class="bg">${bedro.map(b=>`
+    <div class="bc">
+      <div class="bh">
+        <div>
+          <div class="bname">${b.bedrohung_name||'–'}</div>
+          <div class="btyp">${b.bedrohung_typ||''}</div>
+        </div>
+        <span class="bsev ${b.schweregrad||''}">${b.schweregrad||'–'}</span>
+      </div>
+      <p class="bkurz">${b.beschreibung_kurz||''}</p>
+      ${b.lokale_auswirkung?`<p class="blokal">🔍 ${b.lokale_auswirkung}</p>`:''}
+      ${b.schutzmassnahmen?`<p class="blokal" style="margin-top:6px;color:var(--ac)">✓ ${b.schutzmassnahmen}</p>`:''}
+    </div>`).join('')}</div>`;
+}
+
+// ── Hauptrender ────────────────────────────────────────────────────
+async function render(){
+  if(!ART_ID){ document.getElementById('content').innerHTML='<div class="loader">Keine Art angegeben.</div>'; return; }
+
+  // Parallel laden
+  const [art, details, bedro, pop, poly] = await Promise.all([
+    VW.ladeArt(ART_ID, TYP),
+    VW.ladeDetails(ART_ID, TYP),
+    VW.ladeBedroh(ART_ID, TYP),
+    VW.ladePop(ART_ID, TYP),
+    VW.ladePoly(ART_ID)
+  ]);
+
+  if(!art){ document.getElementById('content').innerHTML='<div class="loader">Art nicht gefunden.</div>'; return; }
+
+  // Seitentitel
+  document.title = `${art.name_de} — Verlorene Welten`;
+
+  // HTML rendern
+  document.getElementById('content').innerHTML = `
+<!-- HERO -->
+<div class="dh">
+  <div class="dh-bg" style="background-image:url('${art.bild_url||''}')"></div>
+  <div class="dh-ov"></div>
+  <div class="dh-c">
+    <button class="d-back" onclick="history.back()">← Zurück zur Karte</button>
+    <div>
+      <span class="d-bdg ${art.kategorie}">${art.kategorie} · ${kat(art.kategorie)}</span>
+    </div>
+    <div class="d-name">${art.name_de}</div>
+    <div class="d-sci">${art.name_wissenschaft||''}</div>
+  </div>
+</div>
+
+<!-- BOTSCHAFTER-ZITAT -->
+${art.botschafter_text?`
+<div class="ds">
+  <div class="bq"><p>${art.botschafter_text}</p></div>
+</div>
+<hr class="ds-hr">`:''}
+
+<!-- STECKBRIEF -->
+<div class="ds">
+  <p class="slbl">Steckbrief</p>
+  <h2 class="stit">Alles über ${art.name_de}</h2>
+  <div class="aig">
+    <div class="aii"><div class="ail">Wissenschaftl. Name</div><div class="aiv" style="font-style:italic">${art.name_wissenschaft||'–'}</div></div>
+    <div class="aii"><div class="ail">Gruppe</div><div class="aiv">${art.tiergruppe||'–'}</div></div>
+    <div class="aii"><div class="ail">Population (wild)</div><div class="aiv" style="font-weight:600;color:var(--ac)">${art.population_wild||'–'}</div></div>
+    <div class="aii"><div class="ail">Trend</div><div class="aiv">${art.trend||'–'}</div></div>
+    <div class="aii"><div class="ail">Region</div><div class="aiv">${art.land||art.region||'–'}</div></div>
+    <div class="aii"><div class="ail">Hauptbedrohung</div><div class="aiv">${art.hauptbedrohung||'–'}</div></div>
+    ${details?`
+    <div class="aii"><div class="ail">Ernährung</div><div class="aiv">${details.ernaehrung||'–'}</div></div>
+    <div class="aii"><div class="ail">Sozialverhalten</div><div class="aiv">${details.sozialverhalten||'–'}</div></div>
+    <div class="aii" style="grid-column:1/-1"><div class="ail">Existiert seit</div><div class="aiv">${details.existiert_seit||'–'}</div></div>
+    <div class="aii" style="grid-column:1/-1"><div class="ail">Besonderheiten</div><div class="aiv">${details.besonderheiten||'–'}</div></div>
+    <div class="aii" style="grid-column:1/-1"><div class="ail">Ökologische Rolle</div><div class="aiv">${details.oekolog_rolle||'–'}</div></div>`:''}
+  </div>
+</div>
+
+<hr class="ds-hr">
+
+<!-- KARTE + POPULATIONSDATEN -->
+<div class="ds">
+  <p class="slbl">Verbreitung & Bestand</p>
+  <h2 class="stit">Wo lebt ${art.name_de}?</h2>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+    <div id="detail-map"></div>
+    <div id="pop-chart"><div class="loader">Lade Daten…</div></div>
+  </div>
+  <p style="font-size:11px;color:var(--mu);margin-top:10px">Blassgrau = historisches Verbreitungsgebiet · Farbig = aktuelles Verbreitungsgebiet</p>
+</div>
+
+<hr class="ds-hr">
+
+<!-- BEDROHUNGEN -->
+<div class="ds">
+  <p class="slbl">Bedrohungsanalyse</p>
+  <h2 class="stit">Was gefährdet ${art.name_de}?</h2>
+  <div id="bedro-wrap"><div class="loader">Lade Daten…</div></div>
+</div>
+
+<hr class="ds-hr">
+
+<!-- SCHUTZ -->
+<div class="ds">
+  <p class="slbl">Schutzmaßnahmen</p>
+  <h2 class="stit">Was kann man tun?</h2>
+  <div class="sc-card">
+    <div class="sc-org">Schutzprojekt</div>
+    <div class="sc-name">${art.schutzprojekt_name||'Internationaler Artenschutz'}</div>
+    <div class="sc-links">
+      ${art.schutzprojekt_url?`<a class="btn-sc p" href="${art.schutzprojekt_url}" target="_blank">Schutzprojekt besuchen →</a>`:''}
+      ${art.iucn_url?`<a class="btn-sc s" href="${art.iucn_url}" target="_blank">IUCN Artprofil</a>`:''}
+    </div>
+  </div>
+  <p style="font-size:12px;color:var(--mu);margin-top:16px">
+    Quelle 1: ${art.quelle1||'–'}<br>
+    Quelle 2: ${art.quelle2||'–'}
+  </p>
+</div>`;
+
+  // Karte, Grafiken, Bedrohungen rendern
+  setTimeout(()=>{ renderDetailMap(art, poly); }, 50);
+  renderPopChart(pop, 'pop-chart');
+  renderBedrohungen(bedro, 'bedro-wrap');
+}
+
+applyTheme();
+render();
+</script>
+</body>
+</html>
