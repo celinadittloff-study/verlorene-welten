@@ -8,6 +8,55 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="js/config.js"></script>
+  <style>
+    /* ── Responsive Ergänzungen ── */
+    @media(max-width:768px){
+      #nav{padding:10px 16px}
+      .nav-logo{font-size:14px}
+      .ntb{padding:6px 12px;font-size:11px}
+      #filter-bar{padding:8px 12px;gap:8px;top:57px}
+      #map{height:calc(100vh - 105px)}
+      .sr{flex-direction:column;gap:12px}
+      .ig{grid-template-columns:1fr!important;gap:20px}
+      #info{padding:40px 16px 48px}
+      #legend-bar{padding:10px 12px;gap:10px}
+      .lb-item{font-size:11px}
+    }
+    @media(max-width:480px){
+      .hero-num{font-size:clamp(64px,20vw,120px)}
+      .fg{gap:4px}
+      .pill,.bb{padding:4px 10px;font-size:11px}
+      .nav-right{gap:5px}
+    }
+
+    /* ── Legende VOR der Karte ── */
+    #legend-bar{
+      background:var(--bg2);
+      border-bottom:1px solid var(--brd);
+      padding:12px 24px;
+      display:flex;align-items:center;gap:24px;flex-wrap:wrap;
+      transition:background .5s,border-color .5s;
+    }
+    .lb-title{
+      font-size:10px;font-weight:600;letter-spacing:.18em;
+      text-transform:uppercase;color:var(--mu);white-space:nowrap;
+    }
+    .lb-items{display:flex;gap:20px;flex-wrap:wrap;align-items:center;}
+    .lb-item{display:flex;align-items:center;gap:8px;}
+    .lb-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+    .lb-dot.cr{background:var(--cr);box-shadow:0 0 0 2px var(--cr-bg);}
+    .lb-dot.en{background:var(--en);box-shadow:0 0 0 2px var(--en-bg);}
+    .lb-dot.vu{background:var(--vu);box-shadow:0 0 0 2px var(--vu-bg);}
+    .lb-code{font-size:12px;font-weight:600;color:var(--tx);}
+    .lb-desc{font-size:12px;color:var(--mu);}
+
+    /* Scroll-Text im Light Mode lesbar */
+    body.t-light .sp-t,
+    body.p-light .sp-t{color:rgba(0,0,0,.45);}
+
+    /* Karte: Scroll durch, nur Pinch/Buttons zoomen auf Mobile */
+    #map{touch-action:pan-x pan-y;}
+  </style>
 </head>
 <body class="t-dark">
 
@@ -25,17 +74,39 @@
 
 <!-- HERO -->
 <section class="hero" id="hero">
-  <div class="hero-bg" id="heroBg" style="background-image:url('https://images.unsplash.com/photo-1474511320723-9a56873867b5?w=1600&q=80')"></div>
+  <div class="hero-bg" id="heroBg"></div>
   <div class="hero-c">
     <p class="hero-eye">IUCN Red List · Stand 2025</p>
     <div class="hero-num"><span id="counter">0</span><span class="ac">+</span></div>
-    <p class="hero-sub">bedrohte Arten weltweit.<br><strong>Tiere. Pflanzen. Für immer.</strong></p>
+    <p class="hero-sub">Tier- und Pflanzenarten weltweit<br>vom Aussterben bedroht.<br><strong>Jede Art zählt.</strong></p>
   </div>
-  <div id="scroll-prompt" onclick="document.getElementById('map-section').scrollIntoView({behavior:'smooth'})">
+  <div id="scroll-prompt" onclick="document.getElementById('legend-bar').scrollIntoView({behavior:'smooth'})">
     <span class="sp-t">Erkunde die Welten</span>
     <div class="sp-b"></div>
   </div>
 </section>
+
+<!-- LEGENDE VOR DER KARTE -->
+<div id="legend-bar">
+  <span class="lb-title">Bedrohungsstufen</span>
+  <div class="lb-items">
+    <div class="lb-item">
+      <span class="lb-dot cr"></span>
+      <span class="lb-code">CR</span>
+      <span class="lb-desc">Kritisch gefährdet — vom Aussterben bedroht</span>
+    </div>
+    <div class="lb-item">
+      <span class="lb-dot en"></span>
+      <span class="lb-code">EN</span>
+      <span class="lb-desc">Gefährdet — hohes Aussterberisiko</span>
+    </div>
+    <div class="lb-item">
+      <span class="lb-dot vu"></span>
+      <span class="lb-code">VU</span>
+      <span class="lb-desc">Anfällig — erhöhtes Risiko</span>
+    </div>
+  </div>
+</div>
 
 <!-- FILTER + KARTE -->
 <section id="map-section">
@@ -53,37 +124,32 @@
     <div class="fsep"></div>
     <span class="fl">Bedrohung</span>
     <div class="fg">
-      <button class="bb cr on" onclick="filterKat('CR',this)"><span class="bdot"></span>CR – Kritisch</button>
-      <button class="bb en on" onclick="filterKat('EN',this)"><span class="bdot"></span>EN – Gefährdet</button>
-      <button class="bb vu on" onclick="filterKat('VU',this)"><span class="bdot"></span>VU – Anfällig</button>
+      <button class="bb cr on" onclick="filterKat('CR',this)"><span class="bdot"></span>CR</button>
+      <button class="bb en on" onclick="filterKat('EN',this)"><span class="bdot"></span>EN</button>
+      <button class="bb vu on" onclick="filterKat('VU',this)"><span class="bdot"></span>VU</button>
     </div>
   </div>
   <div id="map"></div>
 </section>
 
-<!-- INFO UNTER KARTE -->
+<!-- INFO -->
 <section id="info">
   <div class="ii">
-    <div class="sr">
-      <div class="si"><span class="sdot cr"></span><div><div class="sc">CR — Kritisch gefährdet</div><div class="sd">Vom Aussterben bedroht. Höchste Dringlichkeit.</div></div></div>
-      <div class="si"><span class="sdot en"></span><div><div class="sc">EN — Gefährdet</div><div class="sd">Hohes Aussterberisiko. Starke Rückgänge.</div></div></div>
-      <div class="si"><span class="sdot vu"></span><div><div class="sc">VU — Anfällig</div><div class="sd">Erhöhtes Risiko. Beobachtung nötig.</div></div></div>
-    </div>
     <div class="ig">
       <div class="ib">
         <p class="ib-e">Was ist die IUCN Red List?</p>
         <h3>Die wichtigste Datenbank der Welt</h3>
-        <p>Seit 1964 bewertet die IUCN den Gefährdungsstatus von Arten weltweit. Über 172.000 Arten wurden untersucht. Jedes Jahr werden die Zahlen schlechter. <a href="https://www.iucnredlist.org" target="_blank">iucnredlist.org →</a></p>
+        <p>Seit 1964 bewertet die IUCN den Gefährdungsstatus von Arten weltweit. Über 172.000 Arten wurden untersucht — jedes Jahr werden die Zahlen schlechter. <a href="https://www.iucnredlist.org" target="_blank">iucnredlist.org →</a></p>
       </div>
       <div class="ib">
-        <p class="ib-e">Warum stirbt so viel aus?</p>
+        <p class="ib-e">Warum sterben so viele Arten aus?</p>
         <h3>Fünf Hauptursachen</h3>
-        <p>Habitatverlust durch Abholzung. Klimawandel. Wilderei. Überfischung. Invasive Arten. In den meisten Fällen wirken alle gleichzeitig — und verstärken sich gegenseitig.</p>
+        <p>Lebensraumverlust durch Abholzung, Klimawandel, Wilderei, Überfischung und eingeschleppte Arten bedrohen die Tierwelt. In den meisten Fällen wirken alle Faktoren gleichzeitig.</p>
       </div>
       <div class="ib">
         <p class="ib-e">Was sind Botschafter-Arten?</p>
         <h3>24 von 47.000+</h3>
-        <p>Diese 24 Arten stehen stellvertretend für tausende weitere. Jede erzählt eine andere Geschichte — über Palmöl, Plastik, Klimawandel, Wilderei. Wer eine versteht, versteht das System.</p>
+        <p>Diese 24 Arten stehen stellvertretend für tausende weitere. Jede erzählt eine andere Geschichte — über Palmöl, Plastik, Klimawandel oder Wilderei. Wer eine versteht, versteht das System dahinter.</p>
       </div>
     </div>
     <div class="ic">
@@ -93,19 +159,19 @@
   </div>
 </section>
 
-<footer>Verlorene Welten · Interaktive Karte bedrohter Arten · Daten: IUCN Red List, WWF, GBIF · Bilder: Wikimedia Commons (CC-Lizenzen) · <a href="https://supabase.com" target="_blank">Powered by Supabase</a></footer>
+<footer>Verlorene Welten · Interaktive Karte bedrohter Arten · Daten: IUCN Red List, WWF, GBIF · Bilder: Wikimedia Commons (CC-Lizenzen)</footer>
 
 <script>
 // ── State ──────────────────────────────────────────────────────────
-let typ = 'tiere', reg = 'alle', kats = new Set(['CR','EN','VU']);
-let arten = [], mrks = [], map;
-let isDark = true, isTier = true;
+let typ='tiere', reg='alle', kats=new Set(['CR','EN','VU']);
+let arten=[], mrks=[], map;
+let isDark=true, isTier=true;
 let tileDk, tileLt;
 
-// Hintergründe je Typ
+// Hero-Bilder: Tiere = Wildtiergruppe, Pflanzen = Waldlandschaft
 const BGHERO = {
-  tiere:   'https://images.unsplash.com/photo-1474511320723-9a56873867b5?w=1600&q=80',
-  pflanzen:'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=1600&q=80'
+  tiere:   'https://images.unsplash.com/photo-1516934024742-b461fba47600?w=1800&q=85', // Gnu-Herde Afrika
+  pflanzen:'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=1800&q=85'  // Regenwald
 };
 
 // ── Counter ────────────────────────────────────────────────────────
@@ -114,13 +180,12 @@ const BGHERO = {
   function go(){
     if(started)return; started=true;
     const el=document.getElementById('counter');
-    const t=Date.now(), ms=2600, target=47000;
+    const t0=Date.now(), ms=2600, target=47000;
     const tick=()=>{
-      const p=Math.min((Date.now()-t)/ms,1);
-      const e=1-Math.pow(1-p,3);
-      el.textContent=Math.round(e*target).toLocaleString('de-DE');
+      const p=Math.min((Date.now()-t0)/ms,1);
+      el.textContent=Math.round((1-Math.pow(1-p,3))*target).toLocaleString('de-DE');
       if(p<1) requestAnimationFrame(tick);
-      else{el.textContent=target.toLocaleString('de-DE'); setTimeout(()=>document.getElementById('scroll-prompt').classList.add('show'),700);}
+      else{ el.textContent=target.toLocaleString('de-DE'); setTimeout(()=>document.getElementById('scroll-prompt').classList.add('show'),700); }
     };
     requestAnimationFrame(tick);
   }
@@ -129,13 +194,11 @@ const BGHERO = {
 
 // ── Theme ──────────────────────────────────────────────────────────
 function applyTheme(){
-  const b=document.body;
-  b.className = isTier ? (isDark?'t-dark':'t-light') : (isDark?'p-dark':'p-light');
+  document.body.className = isTier?(isDark?'t-dark':'t-light'):(isDark?'p-dark':'p-light');
   document.getElementById('modeBtn').textContent = isDark?'☀️':'🌙';
   document.getElementById('heroBg').style.backgroundImage = `url('${BGHERO[typ]}')`;
-  if(map){ updateTile(); }
+  if(map) updateTile();
 }
-
 function toggleMode(){ isDark=!isDark; applyTheme(); }
 
 function setTyp(t,btn){
@@ -150,9 +213,50 @@ function setTyp(t,btn){
 
 // ── Karte ──────────────────────────────────────────────────────────
 function initMap(){
-  map=L.map('map',{center:[20,15],zoom:2,minZoom:2,maxZoom:10,worldCopyJump:false,maxBounds:[[-90,-200],[90,200]],maxBoundsViscosity:.9});
-  tileDk=L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',{attribution:'© <a href="https://openstreetmap.org">OSM</a> © <a href="https://carto.com">CARTO</a>',subdomains:'abcd',maxZoom:20}).addTo(map);
-  tileLt=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',{attribution:'© <a href="https://openstreetmap.org">OSM</a> © <a href="https://carto.com">CARTO</a>',subdomains:'abcd',maxZoom:20});
+  map=L.map('map',{
+    center:[20,15], zoom:2, minZoom:2, maxZoom:10,
+    worldCopyJump:false,
+    maxBounds:[[-85,-200],[85,200]],
+    maxBoundsViscosity:.9,
+    // Scroll-Verhalten: Mausrad nur mit Ctrl oder auf Desktop
+    scrollWheelZoom:true,
+    // Touch: zwei Finger zum Zoomen
+    touchZoom:true,
+    dragging:true
+  });
+
+  tileDk=L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',{
+    attribution:'© <a href="https://openstreetmap.org">OSM</a> © <a href="https://carto.com">CARTO</a>',
+    subdomains:'abcd',maxZoom:20
+  }).addTo(map);
+
+  tileLt=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',{
+    attribution:'© <a href="https://openstreetmap.org">OSM</a> © <a href="https://carto.com">CARTO</a>',
+    subdomains:'abcd',maxZoom:20
+  });
+
+  // Auf Desktop: Scroll deaktivieren, nur mit Ctrl zoomen
+  map.scrollWheelZoom.disable();
+  const mapEl = document.getElementById('map');
+
+  mapEl.addEventListener('mouseenter', ()=>{
+    // Hinweis anzeigen bei hover
+    mapEl.title = 'Strg + Scrollen zum Zoomen';
+  });
+
+  document.addEventListener('keydown', e=>{
+    if(e.ctrlKey || e.metaKey) map.scrollWheelZoom.enable();
+  });
+  document.addEventListener('keyup', ()=>{
+    map.scrollWheelZoom.disable();
+  });
+
+  // Klick auf Karte: Scroll aktivieren, Außerhalb: deaktivieren
+  mapEl.addEventListener('click', ()=>map.scrollWheelZoom.enable());
+  document.addEventListener('click', e=>{
+    if(!mapEl.contains(e.target)) map.scrollWheelZoom.disable();
+  });
+
   laden();
 }
 
@@ -163,15 +267,14 @@ function updateTile(){
 
 // ── Daten ──────────────────────────────────────────────────────────
 async function laden(){
-  try{ arten = await VW.ladeArten(typ==='tiere'?'tier':'pflanze'); }
+  try{ arten=await VW.ladeArten(typ==='tiere'?'tier':'pflanze'); }
   catch(e){ arten=[]; console.error(e); }
   renderMarker();
 }
 
 // ── Marker ─────────────────────────────────────────────────────────
 function renderMarker(){
-  mrks.forEach(m=>map.removeLayer(m));
-  mrks=[];
+  mrks.forEach(m=>map.removeLayer(m)); mrks=[];
   arten
     .filter(a=>(reg==='alle'||a.region===reg) && kats.has(a.kategorie) && a.lat && a.lng)
     .forEach(a=>{
@@ -185,7 +288,6 @@ function renderMarker(){
 // ── Popup ──────────────────────────────────────────────────────────
 function popup(a){
   const lbl={CR:'Kritisch gefährdet',EN:'Gefährdet',VU:'Anfällig'};
-  const detailLink = `detail.html?id=${a.art_id}&typ=${a.typ}`;
   return `
 <img class="pi" src="${a.bild_url||''}" alt="${a.name_de}" loading="lazy" onerror="this.style.height='0'">
 <div class="pb">
@@ -197,7 +299,7 @@ function popup(a){
     <div class="pfl"><span class="pll">Region</span><span class="plv">${a.land||a.region||'–'}</span></div>
     <div class="pfl"><span class="pll">Bedrohung</span><span class="plv">${a.hauptbedrohung||'–'}</span></div>
   </div>
-  <a class="pbtn" href="${detailLink}">Mehr erfahren →</a>
+  <a class="pbtn" href="detail.html?id=${a.art_id}&typ=${a.typ}">Mehr erfahren →</a>
 </div>`;
 }
 
@@ -218,7 +320,6 @@ function filterKat(k,btn){
   renderMarker();
 }
 
-// ── Start ──────────────────────────────────────────────────────────
 initMap();
 </script>
 </body>
