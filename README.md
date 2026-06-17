@@ -1,3 +1,4 @@
+[README.md](https://github.com/user-attachments/files/29036323/README.md)
 # Verlorene Welten — Upload-Anleitung & Projektstruktur
 
 ## Dateistruktur
@@ -132,3 +133,19 @@ Die Pflanzen-Daten sind bereits in Supabase! Die Seite zeigt sie automatisch wen
 | Bilder laden nicht | Wikimedia-URLs direkt im Browser testen |
 | Dark/Light funktioniert nicht | CSS neu hochladen (style.css) |
 | Detail-Seite leer | URL prüfen: muss `?id=1&typ=tier` enthalten |
+
+---
+
+## Hero-Bilder (Collage) hochladen
+
+Die Startseite zeigt deine eigenen Bilder:
+- **Tiere** → `data/hero-tiere.jpg` (Bild 1 — die Tier-Collage)
+- **Pflanzen** → `data/hero-pflanzen.jpg` (Bild 2 — die Pflanzen-Collage)
+
+**So lädst du sie hoch:**
+1. Bild speichern als `hero-tiere.jpg` und `hero-pflanzen.jpg`
+2. Im Repository auf `data/` Ordner klicken
+3. "Add file" → "Upload files" → beide Bilder hochladen
+4. Commit
+
+Empfohlene Bildgröße: **1800 × 900 px**, JPG, max 500 KB.
