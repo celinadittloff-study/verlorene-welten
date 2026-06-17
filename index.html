@@ -9,7 +9,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="js/config.js"></script>
 </head>
-<body class="t-dark">
+<body class="t-light">
 
 <nav id="nav">
   <a class="nav-logo" href="index.html">Verlorene <span>Welten</span></a>
@@ -24,7 +24,7 @@
 
 <!-- HERO mit Collage-Bild -->
 <section class="hero" id="hero">
-  <div class="hero-bg" id="heroBg"></div>
+  <div class="hero-bg" id="heroBg" style="background-image:url('https://images.unsplash.com/photo-1437622368342-7a3d73a34c8f?w=1800&q=85')"></div>
   <div class="hero-c">
     <p class="hero-eye">IUCN Red List · Stand 2025</p>
     <div class="hero-num"><span id="counter">0</span><span class="ac">+</span></div>
@@ -65,9 +65,9 @@
   <div class="fsep"></div>
   <span class="fl">Bedrohung</span>
   <div class="fg">
-    <button class="bb cr on" onclick="filterKat('CR',this)"><span class="bdot"></span>CR</button>
-    <button class="bb en on" onclick="filterKat('EN',this)"><span class="bdot"></span>EN</button>
-    <button class="bb vu on" onclick="filterKat('VU',this)"><span class="bdot"></span>VU</button>
+    <button class="bb cr on" onclick="filterKat('CR',this)" title="CR – Kritisch gefährdet"><span class="bdot"></span> CR</button>
+    <button class="bb en on" onclick="filterKat('EN',this)" title="EN – Gefährdet"><span class="bdot"></span> EN</button>
+    <button class="bb vu on" onclick="filterKat('VU',this)" title="VU – Anfällig"><span class="bdot"></span> VU</button>
   </div>
 </div>
 
@@ -109,13 +109,13 @@
 <script>
 let typ='tiere', reg='alle', kats=new Set(['CR','EN','VU']);
 let arten=[], mrks=[], map, tileDk, tileLt;
-let isDark=true, isTier=true;
+let isDark=false, isTier=true;
 
 // Deine eigenen Collage-Bilder (Bild 1 = Tiere, Bild 2 = Pflanzen)
 // Diese liegen im Repository als data/hero-tiere.jpg und data/hero-pflanzen.jpg
 const HERO = {
-  'tiere':   'data/hero-tiere.jpg',
-  'pflanzen':'data/hero-pflanzen.jpg'
+  'tiere':   'https://images.unsplash.com/photo-1437622368342-7a3d73a34c8f?w=1800&q=85',
+  'pflanzen':'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=1800&q=85'
 };
 
 (()=>{
