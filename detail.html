@@ -11,145 +11,169 @@
 </head>
 <body class="t-dark">
 
-<!-- NAV -->
 <nav id="nav">
-  <div class="nav-logo">Verlorene <span>Welten</span></div>
+  <a class="nav-logo" href="index.html">Verlorene <span>Welten</span></a>
   <div class="nav-right">
-    <a href="index.html" style="font-size:12px;color:var(--mu);padding:6px 12px;border:1px solid var(--brd);border-radius:100px;transition:all .2s" onmouseover="this.style.color='var(--tx)'" onmouseout="this.style.color='var(--mu)'">← Zurück zur Karte</a>
-    <button class="btn-mode" id="modeBtn" onclick="toggleMode()" title="Light/Dark">🌙</button>
+    <a class="btn-back" href="index.html">← Zurück zur Karte</a>
+    <button class="btn-mode" id="modeBtn" onclick="toggleMode()">🌙</button>
   </div>
 </nav>
 
-<!-- CONTENT (wird per JS befüllt) -->
 <div id="content" style="padding-top:65px">
   <div class="loader">Lade Artdaten…</div>
 </div>
 
-<footer>Verlorene Welten · Daten: IUCN Red List, WWF, GBIF · Bilder: Wikimedia Commons (CC-Lizenzen)</footer>
+<footer>Verlorene Welten · Daten: IUCN Red List, WWF, Greenpeace, GBIF · Bilder: Wikimedia Commons (CC-Lizenzen)</footer>
 
 <script>
-// ── URL-Parameter ─────────────────────────────────────────────────
 const p = new URLSearchParams(location.search);
 const ART_ID = parseInt(p.get('id'));
 const TYP    = p.get('typ') || 'tier';
-let isDark   = true;
-let dmap;
+let isDark = true;
+let dmap, chartInst;
 
-// ── Theme ─────────────────────────────────────────────────────────
 function applyTheme(){
-  document.body.className = (TYP==='tier') ? (isDark?'t-dark':'t-light') : (isDark?'p-dark':'p-light');
+  document.body.className = TYP==='tier'?(isDark?'t-dark':'t-light'):(isDark?'p-dark':'p-light');
   document.getElementById('modeBtn').textContent = isDark?'☀️':'🌙';
 }
 function toggleMode(){ isDark=!isDark; applyTheme(); }
 
-// ── Hilfsfunktionen ───────────────────────────────────────────────
-function kat(k){ const l={CR:'Kritisch gefährdet',EN:'Gefährdet',VU:'Anfällig'}; return l[k]||k; }
-
-function fmtPop(n){
+// Zahl formatieren
+function fmt(n){
   if(!n && n!==0) return '–';
   if(n>=1000000) return (n/1000000).toFixed(1).replace('.',',')+' Mio.';
-  if(n>=1000)    return (n/1000).toFixed(0)+'.000';
-  return n.toLocaleString('de-DE');
+  if(n>=1000)    return n.toLocaleString('de-DE');
+  return String(n);
 }
 
-// ── Populationsgrafik ─────────────────────────────────────────────
-function renderPopChart(pop, containerId){
-  if(!pop||!pop.length){ document.getElementById(containerId).innerHTML='<p style="color:var(--mu);font-size:13px">Keine Populationsdaten verfügbar.</p>'; return; }
-  const max = Math.max(...pop.map(p=>p.wert||0)) || 1;
-  const bars = pop.map(p=>{
-    const h = Math.max(4, Math.round(((p.wert||0)/max)*100));
-    return `<div class="pc-bw"><div class="pc-v">${fmtPop(p.wert)}</div><div class="pc-b" style="height:${h}px"></div><div class="pc-y">${p.jahr}</div></div>`;
+// ── Interaktiver Linien-Chart ──────────────────────────────────────
+function renderChart(pop, containerId){
+  if(!pop||!pop.length){
+    document.getElementById(containerId).innerHTML='<p style="color:var(--mu);font-size:13px;padding:20px">Keine Populationsdaten verfügbar.</p>';
+    return;
+  }
+
+  const W=document.getElementById(containerId).offsetWidth||600, H=260;
+  const pad={top:40,right:30,bottom:50,left:70};
+  const cw=W-pad.left-pad.right, ch=H-pad.top-pad.bottom;
+  const vals=pop.map(d=>d.wert||0);
+  const years=pop.map(d=>d.jahr);
+  const maxV=Math.max(...vals)||1;
+  const minV=0;
+
+  // Skalierung
+  const xS = i => pad.left + (i/(pop.length-1||1))*cw;
+  const yS = v => pad.top + ch - ((v-minV)/(maxV-minV))*ch;
+
+  // Pfad
+  const pts = pop.map((d,i)=>`${xS(i).toFixed(1)},${yS(d.wert||0).toFixed(1)}`).join(' ');
+  const area = `M${xS(0).toFixed(1)},${(pad.top+ch).toFixed(1)} `
+    + pop.map((d,i)=>`L${xS(i).toFixed(1)},${yS(d.wert||0).toFixed(1)}`).join(' ')
+    + ` L${xS(pop.length-1).toFixed(1)},${(pad.top+ch).toFixed(1)} Z`;
+
+  // Y-Achse Labels
+  const yTicks=[0,.25,.5,.75,1].map(t=>{
+    const v=minV+(maxV-minV)*t;
+    const y=yS(v);
+    return `<line x1="${pad.left}" y1="${y.toFixed(1)}" x2="${pad.left+cw}" y2="${y.toFixed(1)}" stroke="var(--brd)" stroke-width="1"/>
+    <text x="${(pad.left-8).toFixed(1)}" y="${(y+4).toFixed(1)}" text-anchor="end" font-size="10" fill="var(--mu)">${fmt(Math.round(v))}</text>`;
   }).join('');
-  document.getElementById(containerId).innerHTML=`<div class="pc-wrap"><p class="pc-t">Populationsentwicklung (${pop[0].einheit||'Individuen'})</p><div class="pc-bars">${bars}</div></div>`;
+
+  // X-Achse Labels
+  const xLabels = pop.map((d,i)=>{
+    const x=xS(i);
+    return `<text x="${x.toFixed(1)}" y="${(H-10).toFixed(1)}" text-anchor="middle" font-size="10" fill="var(--mu)">${d.jahr}</text>`;
+  }).join('');
+
+  // Hover-Punkte
+  const dots = pop.map((d,i)=>{
+    const x=xS(i), y=yS(d.wert||0);
+    return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="5" fill="var(--ac)" stroke="var(--sur)" stroke-width="2" class="chart-dot" data-val="${d.wert}" data-year="${d.jahr}" data-quelle="${(d.quelle||'').replace(/"/g,'&quot;')}"/>`;
+  }).join('');
+
+  document.getElementById(containerId).innerHTML = `
+<div class="chart-wrap">
+  <svg width="100%" viewBox="0 0 ${W} ${H}" class="chart-svg">
+    <defs>
+      <linearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="var(--ac)" stop-opacity="0.3"/>
+        <stop offset="100%" stop-color="var(--ac)" stop-opacity="0.02"/>
+      </linearGradient>
+    </defs>
+    ${yTicks}
+    ${xLabels}
+    <path d="${area}" fill="url(#grad)"/>
+    <polyline points="${pts}" fill="none" stroke="var(--ac)" stroke-width="2.5" stroke-linejoin="round"/>
+    ${dots}
+    <text id="chart-tooltip" x="50%" y="20" text-anchor="middle" font-size="11" fill="var(--tx)" opacity="0"></text>
+  </svg>
+  <div id="chart-tip" class="chart-tip" style="display:none"></div>
+</div>`;
+
+  // Hover
+  document.querySelectorAll('.chart-dot').forEach(dot=>{
+    dot.addEventListener('mouseenter', e=>{
+      const v=dot.dataset.val, yr=dot.dataset.year, q=dot.dataset.quelle;
+      const tip=document.getElementById('chart-tip');
+      tip.innerHTML=`<strong>${yr}:</strong> ${fmt(Number(v))} · <span style="color:var(--mu);font-size:10px">${q}</span>`;
+      tip.style.display='block';
+      dot.setAttribute('r','7');
+    });
+    dot.addEventListener('mouseleave',()=>{
+      document.getElementById('chart-tip').style.display='none';
+      dot.setAttribute('r','5');
+    });
+  });
 }
 
 // ── Detail-Karte ──────────────────────────────────────────────────
-function renderDetailMap(art, polygone){
+function renderDetailMap(art, poly){
   if(!dmap){
-    dmap = L.map('detail-map',{center:[art.lat||20,art.lng||0],zoom:4,zoomControl:true});
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',{attribution:'© OSM © CARTO',subdomains:'abcd'}).addTo(dmap);
+    dmap=L.map('detail-map',{center:[art.lat||20,art.lng||0],zoom:4});
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',
+      {attribution:'© OSM © CARTO',subdomains:'abcd'}).addTo(dmap);
   } else {
     dmap.setView([art.lat||20,art.lng||0],4);
   }
-
-  // Marker
-  if(art.lat && art.lng){
-    const cls='cm-'+(art.kategorie||'cr').toLowerCase();
-    const icon=L.divIcon({className:'',html:`<div class="cm ${cls}" style="width:18px;height:18px"></div>`,iconSize:[18,18],iconAnchor:[9,9]});
+  if(art.lat&&art.lng){
+    const icon=L.divIcon({className:'',html:`<div class="cm cm-${(art.kategorie||'cr').toLowerCase()}" style="width:18px;height:18px"></div>`,iconSize:[18,18],iconAnchor:[9,9]});
     L.marker([art.lat,art.lng],{icon}).bindPopup(`<b>${art.name_de}</b>`).addTo(dmap);
   }
-
-  // Verbreitungspolygone
-  if(polygone && polygone.length){
-    const hist = polygone.filter(p=>p.polygon_typ==='historisch');
-    const aktu = polygone.filter(p=>p.polygon_typ==='aktuell');
-    const group = pts => {
-      const pts_sorted = pts.sort((a,b)=>a.punkt_nr-b.punkt_nr);
-      return pts_sorted.map(p=>[p.lat,p.lng]);
-    };
-    if(hist.length) L.polygon(group(hist),{color:'#888',fillColor:'#888',fillOpacity:.15,weight:1,dashArray:'4'}).bindTooltip('Histor. Verbreitung').addTo(dmap);
-    if(aktu.length) L.polygon(group(aktu),{color:'var(--ac)',fillColor:'#C2441C',fillOpacity:.25,weight:2}).bindTooltip('Aktuelle Verbreitung').addTo(dmap);
+  if(poly&&poly.length){
+    const hist=poly.filter(p=>p.polygon_typ==='historisch').sort((a,b)=>a.punkt_nr-b.punkt_nr).map(p=>[p.lat,p.lng]);
+    const aktu=poly.filter(p=>p.polygon_typ==='aktuell').sort((a,b)=>a.punkt_nr-b.punkt_nr).map(p=>[p.lat,p.lng]);
+    if(hist.length) L.polygon(hist,{color:'#888',fillColor:'#888',fillOpacity:.12,weight:1,dashArray:'4'}).bindTooltip('Historisches Verbreitungsgebiet').addTo(dmap);
+    if(aktu.length) L.polygon(aktu,{color:'var(--ac,#C2441C)',fillColor:'#C2441C',fillOpacity:.22,weight:2}).bindTooltip('Aktuelles Verbreitungsgebiet').addTo(dmap);
   }
-}
-
-// ── Bedrohungskarten ───────────────────────────────────────────────
-function renderBedrohungen(bedro, containerId){
-  if(!bedro||!bedro.length){ document.getElementById(containerId).innerHTML='<p style="color:var(--mu);font-size:13px">Keine Bedrohungsdaten verfügbar.</p>'; return; }
-  document.getElementById(containerId).innerHTML = `<div class="bg">${bedro.map(b=>`
-    <div class="bc">
-      <div class="bh">
-        <div>
-          <div class="bname">${b.bedrohung_name||'–'}</div>
-          <div class="btyp">${b.bedrohung_typ||''}</div>
-        </div>
-        <span class="bsev ${b.schweregrad||''}">${b.schweregrad||'–'}</span>
-      </div>
-      <p class="bkurz">${b.beschreibung_kurz||''}</p>
-      ${b.lokale_auswirkung?`<p class="blokal">🔍 ${b.lokale_auswirkung}</p>`:''}
-      ${b.schutzmassnahmen?`<p class="blokal" style="margin-top:6px;color:var(--ac)">✓ ${b.schutzmassnahmen}</p>`:''}
-    </div>`).join('')}</div>`;
 }
 
 // ── Hauptrender ────────────────────────────────────────────────────
 async function render(){
   if(!ART_ID){ document.getElementById('content').innerHTML='<div class="loader">Keine Art angegeben.</div>'; return; }
-
-  // Parallel laden
-  const [art, details, bedro, pop, poly] = await Promise.all([
-    VW.ladeArt(ART_ID, TYP),
-    VW.ladeDetails(ART_ID, TYP),
-    VW.ladeBedroh(ART_ID, TYP),
-    VW.ladePop(ART_ID, TYP),
-    VW.ladePoly(ART_ID)
+  const [art, det, bed, pop, poly] = await Promise.all([
+    VW.ladeArt(ART_ID,TYP), VW.ladeDetails(ART_ID,TYP),
+    VW.ladeBedroh(ART_ID,TYP), VW.ladePop(ART_ID,TYP), VW.ladePoly(ART_ID)
   ]);
-
   if(!art){ document.getElementById('content').innerHTML='<div class="loader">Art nicht gefunden.</div>'; return; }
+  document.title=`${art.name_de} — Verlorene Welten`;
+  const lbl={CR:'Kritisch gefährdet',EN:'Gefährdet',VU:'Anfällig'};
 
-  // Seitentitel
-  document.title = `${art.name_de} — Verlorene Welten`;
+  document.getElementById('content').innerHTML=`
 
-  // HTML rendern
-  document.getElementById('content').innerHTML = `
-<!-- HERO -->
+<!-- HERO: verschwommenes Tierbild als Hintergrund -->
 <div class="dh">
   <div class="dh-bg" style="background-image:url('${art.bild_url||''}')"></div>
   <div class="dh-ov"></div>
   <div class="dh-c">
     <button class="d-back" onclick="history.back()">← Zurück zur Karte</button>
-    <div>
-      <span class="d-bdg ${art.kategorie}">${art.kategorie} · ${kat(art.kategorie)}</span>
-    </div>
+    <div><span class="d-bdg ${art.kategorie}">${art.kategorie} · ${lbl[art.kategorie]||art.kategorie}</span></div>
     <div class="d-name">${art.name_de}</div>
     <div class="d-sci">${art.name_wissenschaft||''}</div>
   </div>
 </div>
 
 <!-- BOTSCHAFTER-ZITAT -->
-${art.botschafter_text?`
-<div class="ds">
-  <div class="bq"><p>${art.botschafter_text}</p></div>
-</div>
-<hr class="ds-hr">`:''}
+${art.botschafter_text?`<div class="ds"><div class="bq"><p>"${art.botschafter_text}"</p></div></div><hr class="ds-hr">`:''}
 
 <!-- STECKBRIEF -->
 <div class="ds">
@@ -157,31 +181,45 @@ ${art.botschafter_text?`
   <h2 class="stit">Alles über ${art.name_de}</h2>
   <div class="aig">
     <div class="aii"><div class="ail">Wissenschaftl. Name</div><div class="aiv" style="font-style:italic">${art.name_wissenschaft||'–'}</div></div>
-    <div class="aii"><div class="ail">Gruppe</div><div class="aiv">${art.tiergruppe||'–'}</div></div>
+    <div class="aii"><div class="ail">Tiergruppe</div><div class="aiv">${art.tiergruppe||'–'}</div></div>
     <div class="aii"><div class="ail">Population (wild)</div><div class="aiv" style="font-weight:600;color:var(--ac)">${art.population_wild||'–'}</div></div>
     <div class="aii"><div class="ail">Trend</div><div class="aiv">${art.trend||'–'}</div></div>
-    <div class="aii"><div class="ail">Region</div><div class="aiv">${art.land||art.region||'–'}</div></div>
+    <div class="aii"><div class="ail">Lebensraum</div><div class="aiv">${art.land||art.region||'–'}</div></div>
     <div class="aii"><div class="ail">Hauptbedrohung</div><div class="aiv">${art.hauptbedrohung||'–'}</div></div>
-    ${details?`
-    <div class="aii"><div class="ail">Ernährung</div><div class="aiv">${details.ernaehrung||'–'}</div></div>
-    <div class="aii"><div class="ail">Sozialverhalten</div><div class="aiv">${details.sozialverhalten||'–'}</div></div>
-    <div class="aii" style="grid-column:1/-1"><div class="ail">Existiert seit</div><div class="aiv">${details.existiert_seit||'–'}</div></div>
-    <div class="aii" style="grid-column:1/-1"><div class="ail">Besonderheiten</div><div class="aiv">${details.besonderheiten||'–'}</div></div>
-    <div class="aii" style="grid-column:1/-1"><div class="ail">Ökologische Rolle</div><div class="aiv">${details.oekolog_rolle||'–'}</div></div>`:''}
+    ${det?`
+    <div class="aii"><div class="ail">Ernährung</div><div class="aiv">${det.ernaehrung||'–'}</div></div>
+    <div class="aii"><div class="ail">Sozialverhalten</div><div class="aiv">${det.sozialverhalten||'–'}</div></div>
+    <div class="aii" style="grid-column:1/-1"><div class="ail">Existiert seit</div><div class="aiv">${det.existiert_seit||'–'}</div></div>
+    <div class="aii" style="grid-column:1/-1"><div class="ail">Besonderheiten</div><div class="aiv">${det.besonderheiten||'–'}</div></div>
+    <div class="aii" style="grid-column:1/-1"><div class="ail">Ökologische Rolle</div><div class="aiv">${det.oekolog_rolle||'–'}</div></div>`:''}
   </div>
 </div>
 
 <hr class="ds-hr">
 
-<!-- KARTE + POPULATIONSDATEN -->
+<!-- VERBREITUNG & POPULATION -->
 <div class="ds">
   <p class="slbl">Verbreitung & Bestand</p>
   <h2 class="stit">Wo lebt ${art.name_de}?</h2>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
-    <div id="detail-map"></div>
-    <div id="pop-chart"><div class="loader">Lade Daten…</div></div>
+
+  <!-- Verbreitungsinfo -->
+  <div class="verbreit-info">
+    <div class="vi-item"><span class="vi-lbl">Aktuelles Verbreitungsgebiet</span><span class="vi-val">${art.land||art.region||'–'}</span></div>
+    <div class="vi-item"><span class="vi-lbl">Habitat</span><span class="vi-val">${art.habitat||'Natürlicher Lebensraum'}</span></div>
+    <div class="vi-item"><span class="vi-lbl">Region</span><span class="vi-val">${art.region||'–'}</span></div>
   </div>
-  <p style="font-size:11px;color:var(--mu);margin-top:10px">Blassgrau = historisches Verbreitungsgebiet · Farbig = aktuelles Verbreitungsgebiet</p>
+
+  <!-- Karte und Chart nebeneinander -->
+  <div class="map-chart-grid">
+    <div id="detail-map"></div>
+    <div>
+      <p class="pc-t">Populationsentwicklung</p>
+      <div id="pop-chart"></div>
+    </div>
+  </div>
+  <p style="font-size:11px;color:var(--mu);margin-top:10px">
+    Gestrichelt = historisches Verbreitungsgebiet · Farbig = aktuelles Verbreitungsgebiet
+  </p>
 </div>
 
 <hr class="ds-hr">
@@ -190,33 +228,45 @@ ${art.botschafter_text?`
 <div class="ds">
   <p class="slbl">Bedrohungsanalyse</p>
   <h2 class="stit">Was gefährdet ${art.name_de}?</h2>
-  <div id="bedro-wrap"><div class="loader">Lade Daten…</div></div>
+  <div class="bg">
+    ${(bed||[]).length ? bed.map(b=>`
+    <div class="bc">
+      <div class="bh">
+        <div><div class="bname">${b.bedrohung_name||'–'}</div><div class="btyp">${b.bedrohung_typ||''}</div></div>
+        <span class="bsev ${b.schweregrad||''}">${b.schweregrad||'–'}</span>
+      </div>
+      <p class="bkurz">${b.beschreibung_kurz||''}</p>
+      ${b.lokale_auswirkung?`<p class="blokal">🔍 ${b.lokale_auswirkung}</p>`:''}
+      ${b.schutzmassnahmen?`<p class="blokal" style="margin-top:6px;color:var(--ac)">✓ ${b.schutzmassnahmen}</p>`:''}
+    </div>`).join('') : '<p style="color:var(--mu);font-size:13px">Keine Bedrohungsdaten verfügbar.</p>'}
+  </div>
 </div>
 
 <hr class="ds-hr">
 
-<!-- SCHUTZ -->
+<!-- SCHUTZ & QUELLEN -->
 <div class="ds">
-  <p class="slbl">Schutzmaßnahmen</p>
+  <p class="slbl">Schutzmaßnahmen & Quellen</p>
   <h2 class="stit">Was kann man tun?</h2>
   <div class="sc-card">
     <div class="sc-org">Schutzprojekt</div>
     <div class="sc-name">${art.schutzprojekt_name||'Internationaler Artenschutz'}</div>
     <div class="sc-links">
-      ${art.schutzprojekt_url?`<a class="btn-sc p" href="${art.schutzprojekt_url}" target="_blank">Schutzprojekt besuchen →</a>`:''}
+      ${art.schutzprojekt_url?`<a class="btn-sc p" href="${art.schutzprojekt_url}" target="_blank">Zum Schutzprojekt →</a>`:''}
       ${art.iucn_url?`<a class="btn-sc s" href="${art.iucn_url}" target="_blank">IUCN Artprofil</a>`:''}
     </div>
   </div>
-  <p style="font-size:12px;color:var(--mu);margin-top:16px">
-    Quelle 1: ${art.quelle1||'–'}<br>
-    Quelle 2: ${art.quelle2||'–'}
-  </p>
+  <div class="quellen-box">
+    <p class="slbl" style="margin-top:24px">Quellen (APA 7)</p>
+    ${[art.quelle1,art.quelle2,art.quelle3,art.quelle4].filter(Boolean).map(q=>`<p class="quelle-item">${q}</p>`).join('')}
+  </div>
 </div>`;
 
-  // Karte, Grafiken, Bedrohungen rendern
-  setTimeout(()=>{ renderDetailMap(art, poly); }, 50);
-  renderPopChart(pop, 'pop-chart');
-  renderBedrohungen(bedro, 'bedro-wrap');
+  // Charts & Karte nach DOM-Einfügung rendern
+  setTimeout(()=>{
+    renderDetailMap(art, poly);
+    renderChart(pop, 'pop-chart');
+  }, 80);
 }
 
 applyTheme();
