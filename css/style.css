@@ -526,3 +526,90 @@ footer{
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms !important; transition-duration:.01ms !important}
 }
+
+/* ═══ ERGÄNZUNGEN v4 ════════════════════════════════════════ */
+
+/* Nav-Logo als Link */
+a.nav-logo{text-decoration:none}
+
+/* Zurück-Button im Nav */
+.btn-back{
+  padding:7px 16px; border-radius:100px;
+  border:1px solid var(--brd); background:transparent;
+  color:var(--mu); font-family:'Inter',sans-serif;
+  font-size:12px; font-weight:500; cursor:pointer;
+  text-decoration:none; transition:all .2s;
+}
+.btn-back:hover{border-color:var(--ac); color:var(--ac)}
+
+/* ── Karte redundante Legende entfernt ── */
+.sr{display:none}
+
+/* ── Verbreitungsinfo über Karte ── */
+.verbreit-info{
+  display:flex; gap:16px; flex-wrap:wrap;
+  background:var(--sur); border:1px solid var(--brd);
+  border-radius:12px; padding:16px 20px; margin-bottom:20px;
+}
+.vi-item{display:flex; flex-direction:column; gap:3px; flex:1; min-width:160px}
+.vi-lbl{font-size:10px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--mu)}
+.vi-val{font-size:14px; color:var(--tx); line-height:1.4}
+
+/* ── Karte + Chart Grid ── */
+.map-chart-grid{
+  display:grid; grid-template-columns:1fr 1fr;
+  gap:20px; align-items:start;
+}
+@media(max-width:700px){.map-chart-grid{grid-template-columns:1fr}}
+
+/* ── SVG Chart ── */
+.chart-wrap{position:relative; width:100%}
+.chart-svg{overflow:visible; display:block}
+.chart-dot{cursor:pointer; transition:r .15s}
+.chart-tip{
+  position:absolute; top:8px; left:50%;
+  transform:translateX(-50%);
+  background:var(--sur); border:1px solid var(--brd);
+  border-radius:8px; padding:6px 12px;
+  font-size:12px; color:var(--tx);
+  white-space:nowrap; pointer-events:none;
+  box-shadow:0 4px 16px rgba(0,0,0,.3);
+  z-index:10;
+}
+.pc-t{font-size:13px; font-weight:600; color:var(--tx); margin-bottom:12px}
+
+/* ── Quellen ── */
+.quellen-box{margin-top:8px}
+.quelle-item{
+  font-size:12px; color:var(--mu); line-height:1.6;
+  padding:8px 0; border-bottom:1px solid var(--brd);
+}
+.quelle-item:last-child{border-bottom:none}
+
+/* ── Detail-Hero: verschwommener Hintergrund wie Herunterladen(16) ── */
+.dh{
+  position:relative; height:100vh; min-height:560px;
+  display:flex; align-items:flex-end; overflow:hidden;
+}
+.dh-bg{
+  position:absolute; inset:0;
+  background-size:cover; background-position:center;
+  /* Starke Unschärfe für den "verschwommener Hintergrund" Effekt */
+  filter:blur(8px) brightness(.5) saturate(.7);
+  transform:scale(1.05); /* verhindert weiße Ränder durch blur */
+}
+.dh-ov{
+  position:absolute; inset:0;
+  background:linear-gradient(to top,
+    rgba(0,0,0,.92) 0%,
+    rgba(0,0,0,.5) 40%,
+    rgba(0,0,0,.15) 100%
+  );
+}
+.dh-c{position:relative; z-index:1; padding:40px 48px; max-width:860px}
+
+/* Auf Mobile: kleinere Höhe */
+@media(max-width:768px){
+  .dh{height:70vh; min-height:400px}
+  .dh-c{padding:24px 20px}
+}
