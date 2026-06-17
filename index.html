@@ -11,19 +11,18 @@
 </head>
 <body class="t-dark">
 
-<!-- ═══ NAV ═══════════════════════════════════════════════ -->
 <nav id="nav">
-  <div class="nav-logo">Verlorene <span>Welten</span></div>
+  <a class="nav-logo" href="index.html">Verlorene <span>Welten</span></a>
   <div class="nav-right">
     <div class="nav-toggle">
       <button class="ntb on" onclick="setTyp('tiere',this)">Tiere</button>
       <button class="ntb"    onclick="setTyp('pflanzen',this)">Pflanzen</button>
     </div>
-    <button class="btn-mode" id="modeBtn" onclick="toggleMode()" title="Light/Dark">🌙</button>
+    <button class="btn-mode" id="modeBtn" onclick="toggleMode()">🌙</button>
   </div>
 </nav>
 
-<!-- ═══ HERO ════════════════════════════════════════════════ -->
+<!-- HERO mit Collage-Bild -->
 <section class="hero" id="hero">
   <div class="hero-bg" id="heroBg"></div>
   <div class="hero-c">
@@ -41,29 +40,17 @@
   </div>
 </section>
 
-<!-- ═══ LEGENDE (einmalig, VOR der Karte) ══════════════════ -->
+<!-- LEGENDE — nur einmal, vor der Karte -->
 <div id="legend-bar">
   <span class="lb-title">Bedrohungsstufen</span>
   <div class="lb-items">
-    <div class="lb-item">
-      <span class="lb-dot cr"></span>
-      <span class="lb-code">CR</span>
-      <span class="lb-desc">— Kritisch gefährdet: unmittelbar vom Aussterben bedroht</span>
-    </div>
-    <div class="lb-item">
-      <span class="lb-dot en"></span>
-      <span class="lb-code">EN</span>
-      <span class="lb-desc">— Gefährdet: hohes Aussterberisiko</span>
-    </div>
-    <div class="lb-item">
-      <span class="lb-dot vu"></span>
-      <span class="lb-code">VU</span>
-      <span class="lb-desc">— Anfällig: erhöhtes Risiko, Beobachtung nötig</span>
-    </div>
+    <div class="lb-item"><span class="lb-dot cr"></span><span class="lb-code">CR</span><span class="lb-desc">— Kritisch gefährdet: unmittelbar vom Aussterben bedroht</span></div>
+    <div class="lb-item"><span class="lb-dot en"></span><span class="lb-code">EN</span><span class="lb-desc">— Gefährdet: hohes Aussterberisiko</span></div>
+    <div class="lb-item"><span class="lb-dot vu"></span><span class="lb-code">VU</span><span class="lb-desc">— Anfällig: erhöhtes Risiko, Beobachtung nötig</span></div>
   </div>
 </div>
 
-<!-- ═══ FILTER-BAR ══════════════════════════════════════════ -->
+<!-- FILTER -->
 <div id="filter-bar">
   <span class="fl">Region</span>
   <div class="fg" id="regionF">
@@ -84,13 +71,13 @@
   </div>
 </div>
 
-<!-- ═══ KARTE ════════════════════════════════════════════════ -->
+<!-- KARTE -->
 <div id="map-wrap">
   <div id="map"></div>
-  <div id="map-hint">Klicken zum Aktivieren · dann Scrollen zum Zoomen</div>
+  <div id="map-hint">Klicken · dann Scrollen zum Zoomen</div>
 </div>
 
-<!-- ═══ INFO ═════════════════════════════════════════════════ -->
+<!-- INFO -->
 <section id="info">
   <div class="ii">
     <div class="ig">
@@ -117,62 +104,43 @@
   </div>
 </section>
 
-<footer>Verlorene Welten · Interaktive Karte bedrohter Arten · Daten: IUCN Red List, WWF, Greenpeace, GBIF · Bilder: Unsplash, Wikimedia Commons (CC-Lizenzen)</footer>
+<footer>Verlorene Welten · Interaktive Karte bedrohter Arten · Daten: IUCN Red List, WWF, Greenpeace, GBIF · Bilder: Wikimedia Commons (CC-Lizenzen)</footer>
 
 <script>
-// ── State ──────────────────────────────────────────────────────
 let typ='tiere', reg='alle', kats=new Set(['CR','EN','VU']);
-let arten=[], mrks=[], map;
+let arten=[], mrks=[], map, tileDk, tileLt;
 let isDark=true, isTier=true;
-let tileDk, tileLt;
 
-// Hero-Bilder: Tiere = Pfotenspur im Sand/Erde, Pflanzen = Abholzung dramatisch
-// Alle Unsplash — kostenlos, keine Lizenz nötig
-const BGHERO = {
-  // Pfoten im Sand mit Plastik — Wolfgang Hasselmann Unsplash
-  'tiere-dark':  'https://images.unsplash.com/photo-1516934024742-b461fba47600?w=1800&q=80',
-  // Pfoten im Erde — wärmerer Ton für Light Mode
-  'tiere-light': 'https://images.unsplash.com/photo-1516934024742-b461fba47600?w=1800&q=80',
-  // Abholzung dramatisch dunkel
-  'pflanzen-dark':  'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=1800&q=80',
-  // Abholzung / Baumstümpfe für Light Mode
-  'pflanzen-light': 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=1800&q=80',
+// Deine eigenen Collage-Bilder (Bild 1 = Tiere, Bild 2 = Pflanzen)
+// Diese liegen im Repository als data/hero-tiere.jpg und data/hero-pflanzen.jpg
+const HERO = {
+  'tiere':   'data/hero-tiere.jpg',
+  'pflanzen':'data/hero-pflanzen.jpg'
 };
 
-function getHeroUrl(){
-  return BGHERO[`${typ}-${isDark?'dark':'light'}`] || BGHERO[`${typ}-dark`];
-}
-
-// ── Counter ────────────────────────────────────────────────────
 (()=>{
-  let started=false;
+  let done=false;
   function go(){
-    if(started)return; started=true;
+    if(done)return; done=true;
     const el=document.getElementById('counter');
-    const t0=Date.now(), ms=2600, target=47000;
+    const t0=Date.now(), ms=2600, tgt=47000;
     const tick=()=>{
       const p=Math.min((Date.now()-t0)/ms,1);
-      el.textContent=Math.round((1-Math.pow(1-p,3))*target).toLocaleString('de-DE');
+      el.textContent=Math.round((1-Math.pow(1-p,3))*tgt).toLocaleString('de-DE');
       if(p<1) requestAnimationFrame(tick);
-      else{
-        el.textContent=target.toLocaleString('de-DE');
-        setTimeout(()=>document.getElementById('scroll-prompt').classList.add('show'),700);
-      }
+      else{ el.textContent=tgt.toLocaleString('de-DE'); setTimeout(()=>document.getElementById('scroll-prompt').classList.add('show'),700); }
     };
     requestAnimationFrame(tick);
   }
-  window.addEventListener('load',()=>setTimeout(go,200));
+  window.addEventListener('load',()=>setTimeout(go,150));
 })();
 
-// ── Theme ──────────────────────────────────────────────────────
 function applyTheme(){
   document.body.className = isTier?(isDark?'t-dark':'t-light'):(isDark?'p-dark':'p-light');
   document.getElementById('modeBtn').textContent = isDark?'☀️':'🌙';
-  const bg = document.getElementById('heroBg');
-  bg.style.backgroundImage = `url('${getHeroUrl()}')`;
+  document.getElementById('heroBg').style.backgroundImage = `url('${HERO[typ]}')`;
   if(map) updateTile();
 }
-
 function toggleMode(){ isDark=!isDark; applyTheme(); }
 
 function setTyp(t,btn){
@@ -181,138 +149,74 @@ function setTyp(t,btn){
   btn.classList.add('on');
   reg='alle';
   document.querySelectorAll('#regionF .pill').forEach(b=>b.classList.toggle('on',b.textContent==='Alle'));
-  applyTheme();
-  laden();
+  applyTheme(); laden();
 }
 
-// ── Karte init ─────────────────────────────────────────────────
 function initMap(){
-  map=L.map('map',{
-    center:[20,15], zoom:2,
-    minZoom:2, maxZoom:10,
-    worldCopyJump:false,
-    maxBounds:[[-85,-200],[85,200]],
-    maxBoundsViscosity:.9,
-    scrollWheelZoom:false,   // Standard: AUS
-    touchZoom:true,
-    dragging:true
-  });
-
-  tileDk=L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',{
-    attribution:'© <a href="https://openstreetmap.org">OSM</a> © <a href="https://carto.com">CARTO</a>',
-    subdomains:'abcd', maxZoom:20
-  }).addTo(map);
-
-  tileLt=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',{
-    attribution:'© <a href="https://openstreetmap.org">OSM</a> © <a href="https://carto.com">CARTO</a>',
-    subdomains:'abcd', maxZoom:20
-  });
-
-  const mapEl = document.getElementById('map');
-  const hint  = document.getElementById('map-hint');
-
-  // Karte klicken → Zoom aktivieren + Hinweis ausblenden
-  mapEl.addEventListener('click', ()=>{
-    map.scrollWheelZoom.enable();
-    hint.classList.add('hidden');
-  });
-
-  // Außerhalb klicken → Zoom deaktivieren + Hinweis wieder einblenden
-  document.addEventListener('click', e=>{
-    if(!mapEl.contains(e.target)){
-      map.scrollWheelZoom.disable();
-      hint.classList.remove('hidden');
-    }
-  });
-
+  map=L.map('map',{center:[20,15],zoom:2,minZoom:2,maxZoom:10,worldCopyJump:false,
+    maxBounds:[[-85,-200],[85,200]],maxBoundsViscosity:.9,scrollWheelZoom:false,touchZoom:true});
+  tileDk=L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',
+    {attribution:'© <a href="https://openstreetmap.org">OSM</a> © <a href="https://carto.com">CARTO</a>',subdomains:'abcd',maxZoom:20}).addTo(map);
+  tileLt=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',
+    {attribution:'© <a href="https://openstreetmap.org">OSM</a> © <a href="https://carto.com">CARTO</a>',subdomains:'abcd',maxZoom:20});
+  const mapEl=document.getElementById('map');
+  const hint=document.getElementById('map-hint');
+  mapEl.addEventListener('click',()=>{ map.scrollWheelZoom.enable(); hint.classList.add('hidden'); });
+  document.addEventListener('click',e=>{ if(!mapEl.contains(e.target)){ map.scrollWheelZoom.disable(); hint.classList.remove('hidden'); } });
   laden();
 }
 
 function updateTile(){
-  if(isDark){
-    if(map.hasLayer(tileLt)) map.removeLayer(tileLt);
-    if(!map.hasLayer(tileDk)) tileDk.addTo(map);
-  } else {
-    if(map.hasLayer(tileDk)) map.removeLayer(tileDk);
-    if(!map.hasLayer(tileLt)) tileLt.addTo(map);
-  }
+  if(isDark){ if(map.hasLayer(tileLt))map.removeLayer(tileLt); if(!map.hasLayer(tileDk))tileDk.addTo(map); }
+  else       { if(map.hasLayer(tileDk))map.removeLayer(tileDk); if(!map.hasLayer(tileLt))tileLt.addTo(map); }
 }
 
-// ── Daten laden ────────────────────────────────────────────────
 async function laden(){
   try{ arten=await VW.ladeArten(isTier?'tier':'pflanze'); }
-  catch(e){ arten=[]; console.error(e); }
+  catch(e){ arten=[]; }
   renderMarker();
 }
 
-// ── Marker ─────────────────────────────────────────────────────
 function renderMarker(){
   mrks.forEach(m=>map.removeLayer(m)); mrks=[];
-  arten
-    .filter(a=>(reg==='alle'||a.region===reg) && kats.has(a.kategorie) && a.lat && a.lng)
+  arten.filter(a=>(reg==='alle'||a.region===reg)&&kats.has(a.kategorie)&&a.lat&&a.lng)
     .forEach(a=>{
-      const icon=L.divIcon({
-        className:'',
-        html:`<div class="cm cm-${a.kategorie.toLowerCase()}"></div>`,
-        iconSize:[14,14], iconAnchor:[7,7], popupAnchor:[0,-10]
-      });
-      const m=L.marker([a.lat,a.lng],{icon})
-        .bindPopup(makePopup(a),{maxWidth:300,minWidth:284,autoPan:true})
-        .addTo(map);
-      mrks.push(m);
+      const icon=L.divIcon({className:'',html:`<div class="cm cm-${a.kategorie.toLowerCase()}"></div>`,iconSize:[14,14],iconAnchor:[7,7],popupAnchor:[0,-10]});
+      mrks.push(L.marker([a.lat,a.lng],{icon}).bindPopup(mkPopup(a),{maxWidth:300,minWidth:284,autoPan:true}).addTo(map));
     });
 }
 
-// ── Popup ──────────────────────────────────────────────────────
-function makePopup(a){
+function mkPopup(a){
   const lbl={CR:'Kritisch gefährdet',EN:'Gefährdet',VU:'Anfällig'};
-  return `
-<img class="pi" src="${a.bild_url||''}" alt="${a.name_de}" loading="lazy" onerror="this.style.display='none'">
+  return `<img class="pi" src="${a.bild_url||''}" alt="${a.name_de}" loading="lazy" onerror="this.style.display='none'">
 <div class="pb">
-  <span class="pbadge ${a.kategorie}">
-    <span style="width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block;flex-shrink:0"></span>
-    ${a.kategorie} · ${lbl[a.kategorie]||a.kategorie}
-  </span>
+  <span class="pbadge ${a.kategorie}"><span style="width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block"></span> ${a.kategorie} · ${lbl[a.kategorie]}</span>
   <div class="pn">${a.name_de}</div>
   <div class="ps">${a.name_wissenschaft||''}</div>
   <div class="pf">
     <div class="pfl"><span class="pll">Bestand</span><span class="plv">${a.population_wild||'–'}</span></div>
-    <div class="pfl"><span class="pll">Region</span><span class="plv">${a.land||a.region||'–'}</span></div>
+    <div class="pfl"><span class="pll">Gruppe</span><span class="plv">${a.tiergruppe||'–'}</span></div>
     <div class="pfl"><span class="pll">Bedrohung</span><span class="plv">${a.hauptbedrohung||'–'}</span></div>
   </div>
   <a class="pbtn" href="detail.html?id=${a.art_id}&typ=${a.typ}">Mehr erfahren →</a>
 </div>`;
 }
 
-// ── Filter: Region ─────────────────────────────────────────────
 function filterReg(r,btn){
   reg=r;
   document.querySelectorAll('#regionF .pill').forEach(b=>b.classList.remove('on'));
   btn.classList.add('on');
-  const z={
-    Afrika:{c:[5,20],z:3}, Asien:{c:[25,95],z:3},
-    Amerika:{c:[5,-75],z:3}, Europa:{c:[52,15],z:4},
-    Ozeanien:{c:[-30,155],z:4}, Ozean:{c:[0,0],z:2},
-    alle:{c:[20,15],z:2}
-  };
-  const t=z[r]||z.alle;
-  map.flyTo(t.c,t.z,{duration:1.1});
-  renderMarker();
+  const z={Afrika:{c:[5,20],z:3},Asien:{c:[25,95],z:3},Amerika:{c:[5,-75],z:3},Europa:{c:[52,15],z:4},Ozeanien:{c:[-30,155],z:4},Ozean:{c:[0,0],z:2},alle:{c:[20,15],z:2}};
+  const t=z[r]||z.alle; map.flyTo(t.c,t.z,{duration:1.1}); renderMarker();
 }
 
-// ── Filter: Kategorie ──────────────────────────────────────────
 function filterKat(k,btn){
-  if(kats.has(k)){
-    if(kats.size>1){ kats.delete(k); btn.classList.remove('on'); btn.classList.add('dim'); }
-  } else {
-    kats.add(k); btn.classList.add('on'); btn.classList.remove('dim');
-  }
+  if(kats.has(k)){ if(kats.size>1){kats.delete(k);btn.classList.remove('on');btn.classList.add('dim');} }
+  else{ kats.add(k);btn.classList.add('on');btn.classList.remove('dim'); }
   renderMarker();
 }
 
-// ── Start ──────────────────────────────────────────────────────
-applyTheme();
-initMap();
+applyTheme(); initMap();
 </script>
 </body>
 </html>
