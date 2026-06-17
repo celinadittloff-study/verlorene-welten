@@ -5,9 +5,168 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Verlorene Welten — Art</title>
   <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="js/config.js"></script>
+  <style>
+    /* ── Detailseite spezifisch ── */
+
+    /* Hero: Tier-Bild verschwommen im Hintergrund, Vollbild */
+    .dh {
+      position: relative;
+      height: 100vh;
+      min-height: 560px;
+      display: flex;
+      align-items: flex-end;
+      overflow: hidden;
+    }
+    .dh-bg {
+      position: absolute; inset: 0;
+      background-size: cover;
+      background-position: center;
+      filter: blur(12px) brightness(.45) saturate(.6);
+      transform: scale(1.08); /* kein weißer Rand */
+      transition: background-image .5s;
+    }
+    .dh-ov {
+      position: absolute; inset: 0;
+      background: linear-gradient(to top,
+        rgba(0,0,0,.95) 0%,
+        rgba(0,0,0,.55) 45%,
+        rgba(0,0,0,.1) 100%);
+    }
+    .dh-c {
+      position: relative; z-index: 1;
+      padding: 40px 52px; max-width: 900px;
+    }
+    .d-back {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 11px; font-weight: 500; letter-spacing: .1em;
+      text-transform: uppercase; color: rgba(255,255,255,.5);
+      margin-bottom: 20px; cursor: pointer;
+      border: none; background: transparent;
+      transition: color .2s;
+    }
+    .d-back:hover { color: #fff; }
+    .d-bdg {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 13px; border-radius: 100px;
+      font-size: 12px; font-weight: 600; margin-bottom: 12px;
+    }
+    .d-bdg.CR { background: rgba(139,31,75,.25); color: #e070b0; border: 1px solid rgba(139,31,75,.5); }
+    .d-bdg.EN { background: rgba(208,72,32,.25); color: #f09070; border: 1px solid rgba(208,72,32,.5); }
+    .d-bdg.VU { background: rgba(184,144,16,.25); color: #e0c050; border: 1px solid rgba(184,144,16,.5); }
+    .d-name {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(38px, 7vw, 80px);
+      font-weight: 900; color: #fff;
+      line-height: .92; margin-bottom: 8px;
+    }
+    .d-sci { font-size: 16px; font-style: italic; color: rgba(255,255,255,.5); }
+
+    /* Sections */
+    .ds { padding: 48px 52px; max-width: 1000px; margin: 0 auto; }
+    .ds-hr { border: none; border-top: 1px solid var(--brd); margin: 0 52px; }
+    @media(max-width:768px) {
+      .dh { height: 70vh; min-height: 400px; }
+      .dh-c, .ds { padding: 28px 20px; }
+      .ds-hr { margin: 0 20px; }
+    }
+
+    /* Botschafter */
+    .bq {
+      background: var(--sur); border: 1px solid var(--brd);
+      border-left: 4px solid var(--ac);
+      border-radius: 0 12px 12px 0;
+      padding: 22px 28px; margin: 0;
+    }
+    .bq p {
+      font-family: 'Playfair Display', serif;
+      font-size: 19px; color: var(--tx);
+      line-height: 1.55; font-style: italic;
+    }
+
+    /* Steckbrief Grid */
+    .aig { display: grid; grid-template-columns: repeat(2,1fr); gap: 14px; }
+    @media(max-width:600px) { .aig { grid-template-columns: 1fr; } }
+    .aii { background: var(--sur); border: 1px solid var(--brd); border-radius: 12px; padding: 16px; }
+    .ail { font-size: 10px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--mu); margin-bottom: 5px; }
+    .aiv { font-size: 14px; color: var(--tx); line-height: 1.5; }
+
+    /* Verbreitungsinfo */
+    .verbreit-info {
+      display: flex; gap: 14px; flex-wrap: wrap;
+      background: var(--sur); border: 1px solid var(--brd);
+      border-radius: 12px; padding: 16px 20px; margin-bottom: 24px;
+    }
+    .vi-item { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 150px; }
+    .vi-lbl { font-size: 10px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--mu); }
+    .vi-val { font-size: 14px; color: var(--tx); }
+
+    /* ── POPULATION CHART ────────────────────────────────────── */
+    .chart-outer {
+      background: var(--sur); border: 1px solid var(--brd);
+      border-radius: 14px; padding: 24px;
+    }
+    .chart-header {
+      display: flex; align-items: center;
+      justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;
+    }
+    .chart-title { font-size: 14px; font-weight: 600; color: var(--tx); }
+    .chart-filters { display: flex; gap: 5px; }
+    .cf-btn {
+      padding: 4px 12px; border-radius: 100px;
+      border: 1px solid var(--brd); background: transparent;
+      color: var(--mu); font-family: 'Inter', sans-serif;
+      font-size: 11px; font-weight: 500; cursor: pointer; transition: all .2s;
+    }
+    .cf-btn.on { background: var(--ac); border-color: var(--ac); color: #fff; }
+    .cf-btn:not(.on):hover { border-color: var(--tx); color: var(--tx); }
+
+    .chart-svg-wrap { position: relative; width: 100%; }
+    .chart-svg { overflow: visible; display: block; width: 100%; }
+
+    /* Tooltip */
+    .chart-tooltip-box {
+      position: absolute;
+      background: var(--bg); border: 1px solid var(--brd);
+      border-radius: 8px; padding: 8px 12px;
+      font-size: 12px; color: var(--tx);
+      pointer-events: none; display: none;
+      white-space: nowrap;
+      box-shadow: 0 4px 20px rgba(0,0,0,.35);
+      z-index: 20;
+    }
+    .ct-year { font-size: 11px; color: var(--mu); margin-bottom: 3px; }
+    .ct-val { font-size: 15px; font-weight: 700; color: var(--ac); }
+    .ct-src { font-size: 10px; color: var(--mu); margin-top: 3px; }
+
+    /* Bedrohungen */
+    .bg { display: grid; grid-template-columns: repeat(auto-fill,minmax(260px,1fr)); gap: 12px; }
+    .bc { background: var(--sur); border: 1px solid var(--brd); border-radius: 12px; padding: 16px; }
+    .bh { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .bsev { padding: 2px 8px; border-radius: 100px; font-size: 10px; font-weight: 600; }
+    .bsev.Hoch   { background: var(--cr-bg); color: var(--cr); }
+    .bsev.Mittel { background: var(--en-bg); color: var(--en); }
+    .bsev.Niedrig{ background: var(--vu-bg); color: var(--vu); }
+    .bname { font-size: 14px; font-weight: 600; color: var(--tx); margin-bottom: 2px; }
+    .btyp  { font-size: 11px; color: var(--mu); margin-bottom: 8px; }
+    .bkurz { font-size: 13px; color: var(--tx2); line-height: 1.6; margin-bottom: 8px; }
+    .blokal{ font-size: 12px; color: var(--mu); line-height: 1.55; }
+
+    /* Schutz */
+    .sc-card { background: var(--sur); border: 1px solid var(--brd); border-radius: 16px; padding: 26px; }
+    .sc-org  { font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--mu); margin-bottom: 5px; }
+    .sc-name { font-family: 'Playfair Display', serif; font-size: 21px; font-weight: 700; color: var(--tx); margin-bottom: 14px; }
+    .sc-links{ display: flex; gap: 10px; flex-wrap: wrap; }
+    .btn-sc  { padding: 10px 20px; border-radius: 8px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; text-decoration: none; transition: opacity .2s; cursor: pointer; border: none; }
+    .btn-sc.p{ background: var(--ac); color: #fff; }
+    .btn-sc.s{ border: 1px solid var(--brd); background: transparent; color: var(--mu); }
+    .btn-sc:hover { opacity: .82; }
+
+    /* Quellen */
+    .quellen-list { margin-top: 20px; }
+    .quelle-item { font-size: 12px; color: var(--mu); line-height: 1.65; padding: 9px 0; border-bottom: 1px solid var(--brd); }
+    .quelle-item:last-child { border-bottom: none; }
+  </style>
 </head>
 <body class="t-dark">
 
@@ -23,208 +182,288 @@
   <div class="loader">Lade Artdaten…</div>
 </div>
 
-<footer>Verlorene Welten · Daten: IUCN Red List, WWF, Greenpeace, GBIF · Bilder: Wikimedia Commons (CC-Lizenzen)</footer>
+<footer>Verlorene Welten · Daten: IUCN Red List, WWF, Greenpeace, GBIF · Bilder: Wikimedia Commons</footer>
 
 <script>
-const p = new URLSearchParams(location.search);
-const ART_ID = parseInt(p.get('id'));
-const TYP    = p.get('typ') || 'tier';
-let isDark = true;
-let dmap, chartInst;
+const params  = new URLSearchParams(location.search);
+const ART_ID  = parseInt(params.get('id'));
+const TYP     = params.get('typ') || 'tier';
+let isDark    = true;
+let allPop    = [];          // alle Populationsdaten gespeichert für Filter
+let aktFilter = 'alle';      // 'alle' | 'jhundert' | 'jahrzehnt'
 
-function applyTheme(){
-  document.body.className = TYP==='tier'?(isDark?'t-dark':'t-light'):(isDark?'p-dark':'p-light');
-  document.getElementById('modeBtn').textContent = isDark?'☀️':'🌙';
+function applyTheme() {
+  document.body.className = TYP==='tier' ? (isDark?'t-dark':'t-light') : (isDark?'p-dark':'p-light');
+  document.getElementById('modeBtn').textContent = isDark ? '☀️' : '🌙';
 }
-function toggleMode(){ isDark=!isDark; applyTheme(); }
+function toggleMode() { isDark=!isDark; applyTheme(); }
 
-// Zahl formatieren
-function fmt(n){
-  if(!n && n!==0) return '–';
-  if(n>=1000000) return (n/1000000).toFixed(1).replace('.',',')+' Mio.';
-  if(n>=1000)    return n.toLocaleString('de-DE');
-  return String(n);
+// ── Zahlenformatierung ─────────────────────────────────────────────
+function fmt(n) {
+  if (n==null||n===undefined) return '–';
+  n = Number(n);
+  if (isNaN(n)) return '–';
+  if (n >= 1000000) return (n/1000000).toFixed(1).replace('.',',') + ' Mio.';
+  return n.toLocaleString('de-DE');
 }
 
-// ── Interaktiver Linien-Chart ──────────────────────────────────────
-function renderChart(pop, containerId){
-  if(!pop||!pop.length){
-    document.getElementById(containerId).innerHTML='<p style="color:var(--mu);font-size:13px;padding:20px">Keine Populationsdaten verfügbar.</p>';
+// ── Populationsdaten filtern ───────────────────────────────────────
+function filterPop(pop, filter) {
+  if (!pop || !pop.length) return [];
+  if (filter === 'alle') return pop;
+
+  const maxJahr = Math.max(...pop.map(d=>d.jahr));
+
+  if (filter === 'jahrzehnt') {
+    // Letzte 50 Jahre
+    return pop.filter(d => d.jahr >= maxJahr - 50);
+  }
+  if (filter === 'jahrhundert') {
+    // Letzten 100 Jahre
+    return pop.filter(d => d.jahr >= maxJahr - 100);
+  }
+  return pop;
+}
+
+// ── Chart rendern ──────────────────────────────────────────────────
+function renderChart(pop) {
+  const wrap = document.getElementById('pop-chart');
+  if (!wrap) return;
+
+  const data = filterPop(pop, aktFilter);
+
+  if (!data || data.length === 0) {
+    wrap.innerHTML = '<p style="color:var(--mu);font-size:13px;padding:20px 0">Keine Populationsdaten für diesen Zeitraum verfügbar.</p>';
     return;
   }
 
-  const W=document.getElementById(containerId).offsetWidth||600, H=260;
-  const pad={top:40,right:30,bottom:50,left:70};
-  const cw=W-pad.left-pad.right, ch=H-pad.top-pad.bottom;
-  const vals=pop.map(d=>d.wert||0);
-  const years=pop.map(d=>d.jahr);
-  const maxV=Math.max(...vals)||1;
-  const minV=0;
+  // SVG Dimensionen
+  const W    = wrap.offsetWidth || 560;
+  const H    = 220;
+  const pad  = { top: 30, right: 20, bottom: 48, left: 72 };
+  const cw   = W - pad.left - pad.right;
+  const ch   = H - pad.top  - pad.bottom;
 
-  // Skalierung
-  const xS = i => pad.left + (i/(pop.length-1||1))*cw;
-  const yS = v => pad.top + ch - ((v-minV)/(maxV-minV))*ch;
+  const vals  = data.map(d => Number(d.wert) || 0);
+  const maxV  = Math.max(...vals) || 1;
+  const n     = data.length;
 
-  // Pfad
-  const pts = pop.map((d,i)=>`${xS(i).toFixed(1)},${yS(d.wert||0).toFixed(1)}`).join(' ');
-  const area = `M${xS(0).toFixed(1)},${(pad.top+ch).toFixed(1)} `
-    + pop.map((d,i)=>`L${xS(i).toFixed(1)},${yS(d.wert||0).toFixed(1)}`).join(' ')
-    + ` L${xS(pop.length-1).toFixed(1)},${(pad.top+ch).toFixed(1)} Z`;
+  const xS = i  => pad.left + (n > 1 ? (i/(n-1))*cw : cw/2);
+  const yS = v  => pad.top  + ch - (v/maxV)*ch;
 
-  // Y-Achse Labels
-  const yTicks=[0,.25,.5,.75,1].map(t=>{
-    const v=minV+(maxV-minV)*t;
-    const y=yS(v);
-    return `<line x1="${pad.left}" y1="${y.toFixed(1)}" x2="${pad.left+cw}" y2="${y.toFixed(1)}" stroke="var(--brd)" stroke-width="1"/>
-    <text x="${(pad.left-8).toFixed(1)}" y="${(y+4).toFixed(1)}" text-anchor="end" font-size="10" fill="var(--mu)">${fmt(Math.round(v))}</text>`;
+  // Linienpfad
+  const pts  = data.map((d,i) => `${xS(i).toFixed(1)},${yS(Number(d.wert)||0).toFixed(1)}`).join(' L ');
+  const path = n > 1 ? `M ${pts}` : `M ${xS(0).toFixed(1)},${yS(Number(data[0].wert)||0).toFixed(1)}`;
+
+  // Fläche
+  const areaPath = n > 1
+    ? `M ${xS(0).toFixed(1)},${(pad.top+ch).toFixed(1)} L ${pts} L ${xS(n-1).toFixed(1)},${(pad.top+ch).toFixed(1)} Z`
+    : '';
+
+  // Y-Achse (4 Ticks)
+  const yTicks = [0, 0.33, 0.66, 1].map(t => {
+    const v = maxV * t;
+    const y = yS(v);
+    return `
+      <line x1="${pad.left}" y1="${y.toFixed(1)}" x2="${(pad.left+cw).toFixed(1)}" y2="${y.toFixed(1)}" stroke="var(--brd)" stroke-width="1" stroke-dasharray="3,3"/>
+      <text x="${(pad.left-8).toFixed(1)}" y="${(y+4).toFixed(1)}" text-anchor="end" font-size="10" fill="var(--mu)">${fmt(Math.round(v))}</text>`;
   }).join('');
 
-  // X-Achse Labels
-  const xLabels = pop.map((d,i)=>{
-    const x=xS(i);
-    return `<text x="${x.toFixed(1)}" y="${(H-10).toFixed(1)}" text-anchor="middle" font-size="10" fill="var(--mu)">${d.jahr}</text>`;
+  // X-Achse Labels (max 8 zeigen, Rest weglassen)
+  const step = Math.ceil(n / 8);
+  const xLabels = data.map((d,i) => {
+    if (i % step !== 0 && i !== n-1) return '';
+    return `<text x="${xS(i).toFixed(1)}" y="${(H-8).toFixed(1)}" text-anchor="middle" font-size="10" fill="var(--mu)">${d.jahr}</text>`;
   }).join('');
 
   // Hover-Punkte
-  const dots = pop.map((d,i)=>{
-    const x=xS(i), y=yS(d.wert||0);
-    return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="5" fill="var(--ac)" stroke="var(--sur)" stroke-width="2" class="chart-dot" data-val="${d.wert}" data-year="${d.jahr}" data-quelle="${(d.quelle||'').replace(/"/g,'&quot;')}"/>`;
+  const dots = data.map((d,i) => {
+    const cx = xS(i).toFixed(1);
+    const cy = yS(Number(d.wert)||0).toFixed(1);
+    return `<circle
+      cx="${cx}" cy="${cy}" r="5"
+      fill="var(--ac)" stroke="var(--sur)" stroke-width="2"
+      class="cdot"
+      data-i="${i}"
+      style="cursor:pointer;transition:r .12s"
+    />`;
   }).join('');
 
-  document.getElementById(containerId).innerHTML = `
-<div class="chart-wrap">
-  <svg width="100%" viewBox="0 0 ${W} ${H}" class="chart-svg">
+  wrap.innerHTML = `
+<div class="chart-svg-wrap">
+  <svg viewBox="0 0 ${W} ${H}" class="chart-svg" id="chartSvg">
     <defs>
-      <linearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="var(--ac)" stop-opacity="0.3"/>
-        <stop offset="100%" stop-color="var(--ac)" stop-opacity="0.02"/>
+      <linearGradient id="areafill" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%"   stop-color="var(--ac)" stop-opacity=".28"/>
+        <stop offset="100%" stop-color="var(--ac)" stop-opacity=".02"/>
       </linearGradient>
     </defs>
     ${yTicks}
     ${xLabels}
-    <path d="${area}" fill="url(#grad)"/>
-    <polyline points="${pts}" fill="none" stroke="var(--ac)" stroke-width="2.5" stroke-linejoin="round"/>
+    ${areaPath ? `<path d="${areaPath}" fill="url(#areafill)"/>` : ''}
+    <path d="${path}" fill="none" stroke="var(--ac)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
     ${dots}
-    <text id="chart-tooltip" x="50%" y="20" text-anchor="middle" font-size="11" fill="var(--tx)" opacity="0"></text>
   </svg>
-  <div id="chart-tip" class="chart-tip" style="display:none"></div>
+  <div class="chart-tooltip-box" id="chartTip">
+    <div class="ct-year" id="ct-year"></div>
+    <div class="ct-val"  id="ct-val"></div>
+    <div class="ct-src"  id="ct-src"></div>
+  </div>
 </div>`;
 
-  // Hover
-  document.querySelectorAll('.chart-dot').forEach(dot=>{
-    dot.addEventListener('mouseenter', e=>{
-      const v=dot.dataset.val, yr=dot.dataset.year, q=dot.dataset.quelle;
-      const tip=document.getElementById('chart-tip');
-      tip.innerHTML=`<strong>${yr}:</strong> ${fmt(Number(v))} · <span style="color:var(--mu);font-size:10px">${q}</span>`;
-      tip.style.display='block';
-      dot.setAttribute('r','7');
+  // Hover-Events
+  const svg  = document.getElementById('chartSvg');
+  const tip  = document.getElementById('chartTip');
+  const svgRect = () => svg.getBoundingClientRect();
+  const vbW  = W, vbH = H;
+
+  document.querySelectorAll('.cdot').forEach(dot => {
+    const idx = parseInt(dot.dataset.i);
+    const d   = data[idx];
+
+    dot.addEventListener('mouseenter', e => {
+      dot.setAttribute('r','8');
+      document.getElementById('ct-year').textContent = `Jahr: ${d.jahr}`;
+      document.getElementById('ct-val').textContent  = fmt(Number(d.wert));
+      document.getElementById('ct-src').textContent  = d.quelle || '';
+
+      // Position relativ zum SVG berechnen
+      const sr   = svgRect();
+      const scaleX = sr.width  / vbW;
+      const scaleY = sr.height / vbH;
+      const cx   = parseFloat(dot.getAttribute('cx')) * scaleX;
+      const cy   = parseFloat(dot.getAttribute('cy')) * scaleY;
+
+      tip.style.display = 'block';
+      tip.style.left    = `${Math.min(cx - 60, sr.width - 180)}px`;
+      tip.style.top     = `${cy - 80}px`;
     });
-    dot.addEventListener('mouseleave',()=>{
-      document.getElementById('chart-tip').style.display='none';
+
+    dot.addEventListener('mouseleave', () => {
       dot.setAttribute('r','5');
+      tip.style.display = 'none';
     });
   });
 }
 
-// ── Detail-Karte ──────────────────────────────────────────────────
-function renderDetailMap(art, poly){
-  if(!dmap){
-    dmap=L.map('detail-map',{center:[art.lat||20,art.lng||0],zoom:4});
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',
-      {attribution:'© OSM © CARTO',subdomains:'abcd'}).addTo(dmap);
-  } else {
-    dmap.setView([art.lat||20,art.lng||0],4);
-  }
-  if(art.lat&&art.lng){
-    const icon=L.divIcon({className:'',html:`<div class="cm cm-${(art.kategorie||'cr').toLowerCase()}" style="width:18px;height:18px"></div>`,iconSize:[18,18],iconAnchor:[9,9]});
-    L.marker([art.lat,art.lng],{icon}).bindPopup(`<b>${art.name_de}</b>`).addTo(dmap);
-  }
-  if(poly&&poly.length){
-    const hist=poly.filter(p=>p.polygon_typ==='historisch').sort((a,b)=>a.punkt_nr-b.punkt_nr).map(p=>[p.lat,p.lng]);
-    const aktu=poly.filter(p=>p.polygon_typ==='aktuell').sort((a,b)=>a.punkt_nr-b.punkt_nr).map(p=>[p.lat,p.lng]);
-    if(hist.length) L.polygon(hist,{color:'#888',fillColor:'#888',fillOpacity:.12,weight:1,dashArray:'4'}).bindTooltip('Historisches Verbreitungsgebiet').addTo(dmap);
-    if(aktu.length) L.polygon(aktu,{color:'var(--ac,#C2441C)',fillColor:'#C2441C',fillOpacity:.22,weight:2}).bindTooltip('Aktuelles Verbreitungsgebiet').addTo(dmap);
-  }
+// ── Zeitfilter ─────────────────────────────────────────────────────
+function setChartFilter(f, btn) {
+  aktFilter = f;
+  document.querySelectorAll('.cf-btn').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  renderChart(allPop);
 }
 
 // ── Hauptrender ────────────────────────────────────────────────────
-async function render(){
-  if(!ART_ID){ document.getElementById('content').innerHTML='<div class="loader">Keine Art angegeben.</div>'; return; }
-  const [art, det, bed, pop, poly] = await Promise.all([
-    VW.ladeArt(ART_ID,TYP), VW.ladeDetails(ART_ID,TYP),
-    VW.ladeBedroh(ART_ID,TYP), VW.ladePop(ART_ID,TYP), VW.ladePoly(ART_ID)
+async function render() {
+  if (!ART_ID) {
+    document.getElementById('content').innerHTML = '<div class="loader">Keine Art angegeben.</div>';
+    return;
+  }
+
+  const [art, det, bed, pop] = await Promise.all([
+    VW.ladeArt(ART_ID, TYP),
+    VW.ladeDetails(ART_ID, TYP),
+    VW.ladeBedroh(ART_ID, TYP),
+    VW.ladePop(ART_ID, TYP)
   ]);
-  if(!art){ document.getElementById('content').innerHTML='<div class="loader">Art nicht gefunden.</div>'; return; }
-  document.title=`${art.name_de} — Verlorene Welten`;
-  const lbl={CR:'Kritisch gefährdet',EN:'Gefährdet',VU:'Anfällig'};
 
-  document.getElementById('content').innerHTML=`
+  if (!art) {
+    document.getElementById('content').innerHTML = '<div class="loader">Art nicht gefunden.</div>';
+    return;
+  }
 
-<!-- HERO: verschwommenes Tierbild als Hintergrund -->
+  allPop = pop || [];
+  document.title = `${art.name_de} — Verlorene Welten`;
+
+  const lbl = { CR:'Kritisch gefährdet', EN:'Gefährdet', VU:'Anfällig' };
+  const einheit = allPop[0]?.einheit || 'Individuen';
+
+  document.getElementById('content').innerHTML = `
+
+<!-- ═══ HERO: Tier-Bild verschwommen als Hintergrund ════════════ -->
 <div class="dh">
-  <div class="dh-bg" style="background-image:url('${art.bild_url||''}')"></div>
+  <div class="dh-bg" id="dhBg" style="background-image:url('${art.bild_url||''}')"></div>
   <div class="dh-ov"></div>
   <div class="dh-c">
-    <button class="d-back" onclick="history.back()">← Zurück zur Karte</button>
+    <button class="d-back" onclick="history.length>1?history.back():location.href='index.html'">← Zurück zur Karte</button>
     <div><span class="d-bdg ${art.kategorie}">${art.kategorie} · ${lbl[art.kategorie]||art.kategorie}</span></div>
     <div class="d-name">${art.name_de}</div>
     <div class="d-sci">${art.name_wissenschaft||''}</div>
   </div>
 </div>
 
-<!-- BOTSCHAFTER-ZITAT -->
-${art.botschafter_text?`<div class="ds"><div class="bq"><p>"${art.botschafter_text}"</p></div></div><hr class="ds-hr">`:''}
+<!-- ═══ BOTSCHAFTER-ZITAT ════════════════════════════════════════ -->
+${art.botschafter_text ? `
+<div class="ds">
+  <div class="bq"><p>"${art.botschafter_text}"</p></div>
+</div>
+<hr class="ds-hr">` : ''}
 
-<!-- STECKBRIEF -->
+<!-- ═══ STECKBRIEF ══════════════════════════════════════════════ -->
 <div class="ds">
   <p class="slbl">Steckbrief</p>
   <h2 class="stit">Alles über ${art.name_de}</h2>
   <div class="aig">
     <div class="aii"><div class="ail">Wissenschaftl. Name</div><div class="aiv" style="font-style:italic">${art.name_wissenschaft||'–'}</div></div>
     <div class="aii"><div class="ail">Tiergruppe</div><div class="aiv">${art.tiergruppe||'–'}</div></div>
-    <div class="aii"><div class="ail">Population (wild)</div><div class="aiv" style="font-weight:600;color:var(--ac)">${art.population_wild||'–'}</div></div>
+    <div class="aii"><div class="ail">Population (wild)</div><div class="aiv" style="font-weight:700;color:var(--ac)">${art.population_wild||'–'}</div></div>
     <div class="aii"><div class="ail">Trend</div><div class="aiv">${art.trend||'–'}</div></div>
     <div class="aii"><div class="ail">Lebensraum</div><div class="aiv">${art.land||art.region||'–'}</div></div>
     <div class="aii"><div class="ail">Hauptbedrohung</div><div class="aiv">${art.hauptbedrohung||'–'}</div></div>
-    ${det?`
+    ${det ? `
     <div class="aii"><div class="ail">Ernährung</div><div class="aiv">${det.ernaehrung||'–'}</div></div>
     <div class="aii"><div class="ail">Sozialverhalten</div><div class="aiv">${det.sozialverhalten||'–'}</div></div>
     <div class="aii" style="grid-column:1/-1"><div class="ail">Existiert seit</div><div class="aiv">${det.existiert_seit||'–'}</div></div>
     <div class="aii" style="grid-column:1/-1"><div class="ail">Besonderheiten</div><div class="aiv">${det.besonderheiten||'–'}</div></div>
-    <div class="aii" style="grid-column:1/-1"><div class="ail">Ökologische Rolle</div><div class="aiv">${det.oekolog_rolle||'–'}</div></div>`:''}
+    <div class="aii" style="grid-column:1/-1"><div class="ail">Ökologische Rolle</div><div class="aiv">${det.oekolog_rolle||'–'}</div></div>` : ''}
   </div>
 </div>
 
 <hr class="ds-hr">
 
-<!-- VERBREITUNG & POPULATION -->
+<!-- ═══ VERBREITUNG & POPULATION ═════════════════════════════════ -->
 <div class="ds">
   <p class="slbl">Verbreitung & Bestand</p>
-  <h2 class="stit">Wo lebt ${art.name_de}?</h2>
+  <h2 class="stit">Wo und wie viele?</h2>
 
-  <!-- Verbreitungsinfo -->
+  <!-- Verbreitungsinfo: Texte über dem Chart -->
   <div class="verbreit-info">
-    <div class="vi-item"><span class="vi-lbl">Aktuelles Verbreitungsgebiet</span><span class="vi-val">${art.land||art.region||'–'}</span></div>
-    <div class="vi-item"><span class="vi-lbl">Habitat</span><span class="vi-val">${art.habitat||'Natürlicher Lebensraum'}</span></div>
-    <div class="vi-item"><span class="vi-lbl">Region</span><span class="vi-val">${art.region||'–'}</span></div>
-  </div>
-
-  <!-- Karte und Chart nebeneinander -->
-  <div class="map-chart-grid">
-    <div id="detail-map"></div>
-    <div>
-      <p class="pc-t">Populationsentwicklung</p>
-      <div id="pop-chart"></div>
+    <div class="vi-item">
+      <span class="vi-lbl">Aktuelles Verbreitungsgebiet</span>
+      <span class="vi-val">${art.land||art.region||'–'}</span>
+    </div>
+    <div class="vi-item">
+      <span class="vi-lbl">Habitat</span>
+      <span class="vi-val">${art.habitat||'Natürlicher Lebensraum'}</span>
+    </div>
+    <div class="vi-item">
+      <span class="vi-lbl">Aktueller Bestand</span>
+      <span class="vi-val" style="font-weight:700;color:var(--ac)">${art.population_wild||'–'}</span>
+    </div>
+    <div class="vi-item">
+      <span class="vi-lbl">Trend</span>
+      <span class="vi-val">${art.trend||'–'}</span>
     </div>
   </div>
-  <p style="font-size:11px;color:var(--mu);margin-top:10px">
-    Gestrichelt = historisches Verbreitungsgebiet · Farbig = aktuelles Verbreitungsgebiet
-  </p>
+
+  <!-- Population Chart — KEIN individuelles Kartchen -->
+  <div class="chart-outer">
+    <div class="chart-header">
+      <span class="chart-title">Populationsentwicklung (${einheit})</span>
+      <div class="chart-filters">
+        <button class="cf-btn on"  onclick="setChartFilter('alle',this)">Alle Jahre</button>
+        <button class="cf-btn"     onclick="setChartFilter('jahrhundert',this)">100 Jahre</button>
+        <button class="cf-btn"     onclick="setChartFilter('jahrzehnt',this)">50 Jahre</button>
+      </div>
+    </div>
+    <div id="pop-chart"></div>
+  </div>
 </div>
 
 <hr class="ds-hr">
 
-<!-- BEDROHUNGEN -->
+<!-- ═══ BEDROHUNGEN ══════════════════════════════════════════════ -->
 <div class="ds">
   <p class="slbl">Bedrohungsanalyse</p>
   <h2 class="stit">Was gefährdet ${art.name_de}?</h2>
@@ -232,41 +471,46 @@ ${art.botschafter_text?`<div class="ds"><div class="bq"><p>"${art.botschafter_te
     ${(bed||[]).length ? bed.map(b=>`
     <div class="bc">
       <div class="bh">
-        <div><div class="bname">${b.bedrohung_name||'–'}</div><div class="btyp">${b.bedrohung_typ||''}</div></div>
+        <div>
+          <div class="bname">${b.bedrohung_name||'–'}</div>
+          <div class="btyp">${b.bedrohung_typ||''}</div>
+        </div>
         <span class="bsev ${b.schweregrad||''}">${b.schweregrad||'–'}</span>
       </div>
       <p class="bkurz">${b.beschreibung_kurz||''}</p>
-      ${b.lokale_auswirkung?`<p class="blokal">🔍 ${b.lokale_auswirkung}</p>`:''}
-      ${b.schutzmassnahmen?`<p class="blokal" style="margin-top:6px;color:var(--ac)">✓ ${b.schutzmassnahmen}</p>`:''}
+      ${b.lokale_auswirkung ? `<p class="blokal">🔍 ${b.lokale_auswirkung}</p>` : ''}
+      ${b.schutzmassnahmen  ? `<p class="blokal" style="margin-top:6px;color:var(--ac)">✓ ${b.schutzmassnahmen}</p>` : ''}
     </div>`).join('') : '<p style="color:var(--mu);font-size:13px">Keine Bedrohungsdaten verfügbar.</p>'}
   </div>
 </div>
 
 <hr class="ds-hr">
 
-<!-- SCHUTZ & QUELLEN -->
+<!-- ═══ SCHUTZ & QUELLEN ════════════════════════════════════════ -->
 <div class="ds">
   <p class="slbl">Schutzmaßnahmen & Quellen</p>
   <h2 class="stit">Was kann man tun?</h2>
+
   <div class="sc-card">
     <div class="sc-org">Schutzprojekt</div>
     <div class="sc-name">${art.schutzprojekt_name||'Internationaler Artenschutz'}</div>
     <div class="sc-links">
-      ${art.schutzprojekt_url?`<a class="btn-sc p" href="${art.schutzprojekt_url}" target="_blank">Zum Schutzprojekt →</a>`:''}
-      ${art.iucn_url?`<a class="btn-sc s" href="${art.iucn_url}" target="_blank">IUCN Artprofil</a>`:''}
+      ${art.schutzprojekt_url ? `<a class="btn-sc p" href="${art.schutzprojekt_url}" target="_blank">Zum Schutzprojekt →</a>` : ''}
+      ${art.iucn_url ? `<a class="btn-sc s" href="${art.iucn_url}" target="_blank">IUCN Artprofil</a>` : ''}
     </div>
   </div>
-  <div class="quellen-box">
-    <p class="slbl" style="margin-top:24px">Quellen (APA 7)</p>
-    ${[art.quelle1,art.quelle2,art.quelle3,art.quelle4].filter(Boolean).map(q=>`<p class="quelle-item">${q}</p>`).join('')}
+
+  <div class="quellen-list">
+    <p class="slbl" style="margin-top:24px;margin-bottom:8px">Quellen (APA 7)</p>
+    ${[art.quelle1,art.quelle2,art.quelle3,art.quelle4]
+      .filter(Boolean)
+      .map(q=>`<p class="quelle-item">${q}</p>`)
+      .join('')}
   </div>
 </div>`;
 
-  // Charts & Karte nach DOM-Einfügung rendern
-  setTimeout(()=>{
-    renderDetailMap(art, poly);
-    renderChart(pop, 'pop-chart');
-  }, 80);
+  // Chart nach DOM-Einfügung rendern
+  setTimeout(() => renderChart(allPop), 80);
 }
 
 applyTheme();
